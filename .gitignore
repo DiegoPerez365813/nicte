@@ -1,0 +1,24 @@
+# Backend (Python)
+backend/venv/
+backend/venv_win/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/.env
+backend/server_log.txt
+backend/server_err.txt
+backend/app/data/embeddings_cache/
+backend/ans.txt
+backend/ans2.txt
+
+# Frontend (Node/Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/server_log.txt
+frontend/server_err.txt
+frontend/.env.local
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.claude/

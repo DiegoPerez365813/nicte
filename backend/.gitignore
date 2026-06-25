@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+venv/
+venv_win/
+server_log.txt
+server_err.txt
+app/data/embeddings_cache/
