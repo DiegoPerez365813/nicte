@@ -40,9 +40,71 @@ recitar artículos. Para cada respuesta:
    preguntas sobre "¿existe tal institución?" o "¿a quién acudo?" se
    responden directamente, sin que cada respuesta tenga que anclarse a un
    artículo.
+5. Cuando la situación involucre policías, Ministerio Público u otras
+   autoridades, explica con claridad qué SÍ pueden hacer y qué NO pueden
+   hacer legalmente (por ejemplo: no pueden detenerte sin orden judicial o
+   sin que exista flagrancia, no pueden retenerte más de 48 horas — 96 en
+   delincuencia organizada — sin presentarte ante un juez, no pueden
+   obligarte a declarar ni incomunicarte, tienes derecho a un abogado desde
+   el primer momento). Indica también cómo defenderse si la autoridad se
+   excede, y cómo denunciar abuso o corrupción: ante la institución estatal
+   correspondiente (Fiscalía/Visitaduría/Asuntos Internos del estado,
+   Contraloría o Secretaría Anticorrupción estatal, Comisión Estatal de
+   Derechos Humanos) cuando conozcas el estado del usuario, y siempre
+   mencionando las vías nacionales disponibles: la Comisión Nacional de los
+   Derechos Humanos (CNDH), la Plataforma Nacional de Denuncia Ciudadana de
+   la Secretaría Anticorrupción y Buen Gobierno, la línea de denuncia
+   anónima 089, y la Fiscalía Especializada en Combate a la Corrupción que
+   corresponda.
 
 Nunca afirmas ser abogado. Nunca emites juicios morales sobre la situación
 del usuario, incluso en temas delicados."""
+
+# Local institutions worth naming when the user's state is known — generic
+# legal knowledge, not tied to the retrieved corpus, so safe to surface even
+# when validate_citations would reject an unsupported article number.
+STATE_INSTITUTIONS: dict[str, dict[str, str]] = {
+    "Ciudad de México": {
+        "fiscalia": "Fiscalía General de Justicia de la Ciudad de México (FGJ CDMX)",
+        "derechos_humanos": "Comisión de Derechos Humanos de la Ciudad de México (CDHCM)",
+        "anticorrupcion": "Secretaría de la Contraloría General de la CDMX y Fiscalía Especializada en Combate a la Corrupción de la CDMX",
+        "seguridad": "Secretaría de Seguridad Ciudadana de la CDMX (SSC) — Visitaduría/Asuntos Internos para quejas contra policías",
+    },
+    "Jalisco": {
+        "fiscalia": "Fiscalía del Estado de Jalisco",
+        "derechos_humanos": "Comisión Estatal de Derechos Humanos Jalisco (CEDHJ)",
+        "anticorrupcion": "Secretaría de Transparencia, Integridad y Combate a la Corrupción de Jalisco y Fiscalía Especializada en Combate a la Corrupción de Jalisco",
+        "seguridad": "Secretaría de Seguridad Pública de Jalisco — Visitaduría/Asuntos Internos para quejas contra policías",
+    },
+    "Nuevo León": {
+        "fiscalia": "Fiscalía General de Justicia del Estado de Nuevo León",
+        "derechos_humanos": "Comisión Estatal de Derechos Humanos de Nuevo León (CEDHNL)",
+        "anticorrupcion": "Secretaría de la Contraloría y Transparencia Gubernamental de Nuevo León y Fiscalía Anticorrupción del Estado",
+        "seguridad": "Secretaría de Seguridad Pública de Nuevo León — Visitaduría/Asuntos Internos para quejas contra policías",
+    },
+    "Estado de México": {
+        "fiscalia": "Fiscalía General de Justicia del Estado de México",
+        "derechos_humanos": "Comisión de Derechos Humanos del Estado de México (CODHEM)",
+        "anticorrupcion": "Secretaría de la Contraloría del Estado de México y Fiscalía Especializada en Combate a la Corrupción",
+        "seguridad": "Secretaría de Seguridad del Estado de México — Visitaduría/Asuntos Internos para quejas contra policías",
+    },
+}
+
+
+def _state_institutions_block(state: str | None) -> str:
+    institutions = STATE_INSTITUTIONS.get(state) if state else None
+    if not institutions:
+        return ""
+    lines = [
+        "",
+        f"INSTITUCIONES DE {state.upper()} QUE PUEDES NOMBRAR SI APLICA AL CASO:",
+        f"- Fiscalía: {institutions['fiscalia']}",
+        f"- Derechos humanos: {institutions['derechos_humanos']}",
+        f"- Anticorrupción: {institutions['anticorrupcion']}",
+        f"- Seguridad / quejas contra policías: {institutions['seguridad']}",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def _quote(chunk: RetrievedChunk, max_len: int = 280) -> str:
@@ -147,6 +209,7 @@ def _anthropic_generate(
     message: str,
     context_chunks: list[RetrievedChunk],
     defense_chunks: list[RetrievedChunk] | None = None,
+    state: str | None = None,
 ) -> str:
     import anthropic
 
@@ -170,6 +233,7 @@ def _anthropic_generate(
             for c in defense_chunks
         )
         user_prompt += _DEFENSE_INSTRUCTIONS.format(defense_block=defense_block) + "\n\n"
+    user_prompt += _state_institutions_block(state)
     user_prompt += f"PREGUNTA DEL USUARIO:\n{message}"
 
     client = anthropic.Anthropic()
@@ -186,7 +250,8 @@ def generate_answer(
     message: str,
     context_chunks: list[RetrievedChunk],
     defense_chunks: list[RetrievedChunk] | None = None,
+    state: str | None = None,
 ) -> str:
     if os.getenv("ANTHROPIC_API_KEY"):
-        return _anthropic_generate(message, context_chunks, defense_chunks)
+        return _anthropic_generate(message, context_chunks, defense_chunks, state)
     return _mock_generate(message, context_chunks, defense_chunks)

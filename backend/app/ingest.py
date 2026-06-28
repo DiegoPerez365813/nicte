@@ -65,10 +65,36 @@ SOURCES: list[LawSource] = [
     LawSource("LFPDPPP", "Ley Federal de Protección de Datos Personales en Posesión de los Particulares",
                "derechos_humanos", "federal",
                "https://www.diputados.gob.mx/LeyesBiblio/pdf/LFPDPPP.pdf"),
+
+    # State codes — penal, civil and family law in Mexico are mostly state
+    # jurisdiction, not federal. The federal codes above (CPF, CCF) only
+    # govern federal-territory/federal-crime matters; most real disputes
+    # are governed by the state where they happened. Starting with the four
+    # most populous states; jurisdiction holds the state name so the
+    # retriever can prefer a user's own state over others.
+    LawSource("CPDF", "Código Penal para el Distrito Federal", "penal", "Ciudad de México",
+               "https://data.consejeria.cdmx.gob.mx/images/leyes/codigos/2025/CODIGO_PENAL_PARA_EL_DF_12.3.2.pdf"),
+    LawSource("CCDF", "Código Civil para el Distrito Federal", "civil", "Ciudad de México",
+               "https://www.congresocdmx.gob.mx/media/documentos/50289a13825049361bb4abc0298d1374beed4009.pdf"),
+    LawSource("CPJAL", "Código Penal para el Estado Libre y Soberano de Jalisco", "penal", "Jalisco",
+               "https://transparencia.info.jalisco.gob.mx/sites/default/files/CODIGO%20PENAL%20PARA%20EL%20ESTADO%20DE%20JALISCO_2.pdf"),
+    LawSource("CCJAL", "Código Civil del Estado de Jalisco", "civil", "Jalisco",
+               "https://transparencia.info.jalisco.gob.mx/sites/default/files/C%C3%B3digo%20Civil%20del%20Estado%20de%20Jalisco_3.pdf"),
+    LawSource("CPNL", "Código Penal para el Estado de Nuevo León", "penal", "Nuevo León",
+               "https://www.linares.gob.mx/transparencia/95_01_normatividad/leyes_estatales/47_Codigo_Penal_Nuevo_Leon.pdf"),
+    LawSource("CCNL", "Código Civil para el Estado de Nuevo León", "civil", "Nuevo León",
+               "http://www.ordenjuridico.gob.mx/Publicaciones/DI2005/pdf/NL1.pdf"),
+    LawSource("CPMEX", "Código Penal del Estado de México", "penal", "Estado de México",
+               "https://legislacion.edomex.gob.mx/sites/legislacion.edomex.gob.mx/files/files/pdf/cod/vig/codvig006.pdf"),
+    LawSource("CCMEX", "Código Civil del Estado de México", "civil", "Estado de México",
+               "https://legislacion.edomex.gob.mx/sites/legislacion.edomex.gob.mx/files/files/pdf/cod/vig/codvig001.pdf"),
 ]
 
 ARTICLE_PATTERN = re.compile(
-    r"Art[íi]culo\s+(\d+(?:\s*(?:Bis|Ter|Qu[aá]ter|Quinquies)\b)?(?:[-–]\w+)?)\s*[.\-–]",
+    # \d+(\.\d+)? handles decimal article numbering used by some state codes
+    # (e.g. Estado de México: "Artículo 1.1", "Artículo 1.5 Bis") in addition
+    # to the plain \d+ numbering most federal/state codes use.
+    r"Art[íi]culo\s+(\d+(?:\.\d+)?(?:\s*(?:Bis|Ter|Qu[aá]ter|Quinquies)\b)?(?:[-–]\w+)?)\s*[.\-–]",
     re.IGNORECASE,
 )
 
@@ -79,7 +105,11 @@ def download_pdf(source: LawSource) -> Path:
         return raw_path
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    with httpx.Client(follow_redirects=True, timeout=60) as client:
+    # Some state government sites (e.g. consejeria.cdmx.gob.mx) serve an
+    # incomplete certificate chain — acceptable to skip verification here
+    # since these are one-time admin downloads from known official domains,
+    # not user-facing requests.
+    with httpx.Client(follow_redirects=True, timeout=60, verify=False) as client:
         resp = client.get(source.url, headers={"User-Agent": "Mozilla/5.0 (Nicte-Ingest/0.1)"})
         resp.raise_for_status()
         raw_path.write_bytes(resp.content)

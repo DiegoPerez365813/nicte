@@ -138,6 +138,8 @@ class LegalRetriever:
         self._by_law_and_article: dict[tuple[str, str], dict] = {
             (doc["law_name"], doc["article_number"]): doc for doc in self._corpus
         }
+        self._jurisdictions = np.array([doc["jurisdiction"] for doc in self._corpus])
+        self._is_federal = self._jurisdictions == "federal"
 
     def get_defense_articles(self) -> list[RetrievedChunk]:
         """Fixed set of constitutional due-process/defense-rights articles,
@@ -189,6 +191,7 @@ class LegalRetriever:
         top_k: int = 4,
         min_score: float = 0.3,
         semantic_weight: float = 0.7,
+        state: str | None = None,
     ) -> list[RetrievedChunk]:
         query_vec = self._model.encode([query], normalize_embeddings=True)[0]
         semantic_scores = self._embeddings @ query_vec  # cosine sim (vectors normalized)
@@ -217,6 +220,30 @@ class LegalRetriever:
             mask = np.full(len(self._corpus), False)
             mask[allowed] = True
             combined_scores = np.where(mask, combined_scores, -np.inf)
+
+        # Penal/civil/familiar law is mostly state jurisdiction in Mexico —
+        # ordinary crimes/disputes are governed exclusively by the state
+        # code, with the federal code (CPF/CCF) only covering a narrow set
+        # of federal-jurisdiction matters. Mixing both pools and ranking by
+        # raw score lets an irrelevant federal article (e.g. CPF's vehicle-
+        # theft article for a phone-theft question) outrank the actually
+        # applicable state article, since they happen to share vocabulary.
+        # So: when the state is known, search ONLY that state's articles
+        # first; fall back to federal-only if the state corpus has nothing
+        # relevant. When the state is unknown, default to federal-only
+        # (excluding other states' codes, which would just be wrong).
+        if state is not None:
+            state_scores = np.where(self._jurisdictions == state, combined_scores, -np.inf)
+            if np.any(state_scores >= min_score):
+                combined_scores = state_scores
+            else:
+                federal_scores = np.where(self._is_federal, combined_scores, -np.inf)
+                if np.any(federal_scores >= min_score):
+                    combined_scores = federal_scores
+        else:
+            federal_scores = np.where(self._is_federal, combined_scores, -np.inf)
+            if np.any(federal_scores >= min_score):
+                combined_scores = federal_scores
 
         ranked_idx = np.argsort(combined_scores)[::-1][:top_k]
 

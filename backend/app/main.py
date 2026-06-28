@@ -18,7 +18,8 @@ from app.safety import (
     validate_citations,
 )
 from app.schemas import ChatRequest, ChatResponse, Citation
-from app.session_store import resolve_clarification, start_clarification
+from app.session_store import get_state, resolve_clarification, set_state, start_clarification
+from app.state_detector import detect_state
 
 app = FastAPI(title="Nicté API", version="0.1.0")
 
@@ -57,6 +58,16 @@ def chat_message(request: ChatRequest) -> ChatResponse:
             safety_flag="emergency",
         )
 
+    # Remember the user's state as soon as it's mentioned, on every message
+    # regardless of which branch handles it below — most penal/civil/familiar
+    # law in Mexico is state jurisdiction, so this scopes retrieval to the
+    # right code instead of guessing from federal law alone. Re-check every
+    # message in case the user corrects themselves.
+    mentioned_state = detect_state(request.message)
+    if mentioned_state:
+        set_state(session_id, mentioned_state)
+    user_state = get_state(session_id)
+
     # Two-turn triage: if this session already asked clarifying questions
     # and is waiting on the reply, fold both messages into one specific
     # query instead of treating the reply as a brand-new, even vaguer
@@ -81,7 +92,7 @@ def chat_message(request: ChatRequest) -> ChatResponse:
         effective_message = request.message
 
     retriever = get_retriever()
-    retrieved = retriever.retrieve(effective_message)
+    retrieved = retriever.retrieve(effective_message, state=user_state)
 
     if not retrieved:
         return ChatResponse(
@@ -101,7 +112,7 @@ def chat_message(request: ChatRequest) -> ChatResponse:
         else []
     )
 
-    raw_answer = generate_answer(effective_message, retrieved, defense_chunks)
+    raw_answer = generate_answer(effective_message, retrieved, defense_chunks, state=user_state)
 
     safety_flag = None
     if not validate_citations(raw_answer, retrieved + defense_chunks):

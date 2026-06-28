@@ -45,7 +45,7 @@ def detect_emergency(message: str) -> bool:
 
 
 _ARTICLE_CITATION_PATTERN = re.compile(
-    r"art[íi]culo\s+(\d+(?:-[A-Za-zÑñ]{1,3})?(?:\s+(?:bis|ter|qu[áa]ter|quinquies))?)",
+    r"art[íi]culo\s+(\d+(?:\.\d+)?(?:-[A-Za-zÑñ]{1,3})?(?:\s+(?:bis|ter|qu[áa]ter|quinquies))?)",
     re.IGNORECASE,
 )
 

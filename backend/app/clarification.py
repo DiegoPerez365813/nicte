@@ -14,14 +14,17 @@ CLARIFYING_QUESTIONS: dict[str, list[str]] = {
         "¿Te dieron alguna razón del despido, o algo por escrito?",
     ],
     "civil": [
+        "¿En qué estado de la República ocurrió esto?",
         "¿Existe un contrato firmado para esta situación?",
         "¿Ya intentaste resolverlo directamente con la otra parte?",
     ],
     "penal": [
+        "¿En qué estado de la República ocurrió esto?",
         "¿Ya levantaste una denuncia ante el Ministerio Público, o aún no?",
         "¿Hay algún riesgo inmediato para tu seguridad en este momento?",
     ],
     "familiar": [
+        "¿En qué estado de la República ocurrió esto?",
         "¿Hay ya algún acuerdo, convenio o resolución judicial previa sobre esto?",
         "¿Los menores involucrados están actualmente a salvo?",
     ],
