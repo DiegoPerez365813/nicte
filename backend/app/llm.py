@@ -91,10 +91,30 @@ STATE_INSTITUTIONS: dict[str, dict[str, str]] = {
 }
 
 
+def _generic_state_institutions(state: str) -> dict[str, str]:
+    """Fallback institution names for states without a curated entry above,
+    following the naming convention nearly every Mexican state uses. Close
+    enough to point the user in the right direction even if a given state's
+    exact official name differs slightly — this is general orientation, not
+    a cited legal fact, so it isn't subject to validate_citations."""
+    return {
+        "fiscalia": f"Fiscalía General de Justicia del Estado de {state}",
+        "derechos_humanos": f"Comisión Estatal de Derechos Humanos de {state}",
+        "anticorrupcion": (
+            f"Secretaría de la Contraloría del Estado de {state} y su Fiscalía "
+            f"Especializada en Combate a la Corrupción"
+        ),
+        "seguridad": (
+            f"Secretaría de Seguridad Pública del Estado de {state} — "
+            f"Visitaduría/Asuntos Internos para quejas contra policías"
+        ),
+    }
+
+
 def _state_institutions_block(state: str | None) -> str:
-    institutions = STATE_INSTITUTIONS.get(state) if state else None
-    if not institutions:
+    if not state:
         return ""
+    institutions = STATE_INSTITUTIONS.get(state) or _generic_state_institutions(state)
     lines = [
         "",
         f"INSTITUCIONES DE {state.upper()} QUE PUEDES NOMBRAR SI APLICA AL CASO:",

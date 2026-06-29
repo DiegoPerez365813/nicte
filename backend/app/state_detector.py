@@ -8,33 +8,66 @@ into LegalRetriever.retrieve(state=...).
 """
 
 import re
+import unicodedata
 
-# Canonical name -> aliases/abbreviations users actually type. Only states
-# with an ingested corpus are listed for now (see app/ingest.py SOURCES);
-# add an entry here whenever a new state's codes are ingested.
+# Canonical name -> aliases/abbreviations users actually type, covering all
+# 32 federal entities (see app/ingest.py SOURCES for the matching corpus).
+# Aliases are written without accents — _normalize() strips accents from
+# both sides before comparing, so "México"/"mexico" are equivalent.
 STATE_ALIASES: dict[str, list[str]] = {
+    "Aguascalientes": ["aguascalientes"],
+    "Baja California": ["baja california", "tijuana", "mexicali", "ensenada"],
+    "Baja California Sur": ["baja california sur", "la paz bcs", "los cabos"],
+    "Campeche": ["campeche"],
+    "Chiapas": ["chiapas", "tuxtla gutierrez", "tapachula"],
+    "Chihuahua": ["chihuahua", "ciudad juarez", "cd juarez"],
+    "Coahuila": ["coahuila", "saltillo", "torreon"],
+    "Colima": ["colima", "manzanillo"],
     "Ciudad de México": [
         "ciudad de mexico", "cdmx", "distrito federal", "df", "mexico df",
         "mexico city",
     ],
-    "Jalisco": ["jalisco", "guadalajara", "zapopan", "tlaquepaque"],
-    "Nuevo León": [
-        "nuevo leon", "monterrey", "san pedro garza garcia", "guadalupe nl",
-    ],
+    "Durango": ["durango"],
     "Estado de México": [
         "estado de mexico", "edomex", "edo. de mexico", "edo de mexico",
         "ecatepec", "naucalpan", "toluca",
     ],
+    "Guanajuato": ["guanajuato", "leon guanajuato", "irapuato"],
+    "Guerrero": ["guerrero", "acapulco", "chilpancingo"],
+    "Hidalgo": ["hidalgo", "pachuca"],
+    "Jalisco": ["jalisco", "guadalajara", "zapopan", "tlaquepaque"],
+    "Michoacán": ["michoacan", "morelia", "uruapan"],
+    "Morelos": ["morelos", "cuernavaca"],
+    "Nayarit": ["nayarit", "tepic"],
+    "Nuevo León": [
+        "nuevo leon", "monterrey", "san pedro garza garcia", "guadalupe nl",
+    ],
+    "Oaxaca": ["oaxaca"],
+    "Puebla": ["puebla"],
+    "Querétaro": ["queretaro"],
+    "Quintana Roo": ["quintana roo", "cancun", "playa del carmen", "chetumal"],
+    "San Luis Potosí": ["san luis potosi", "slp"],
+    "Sinaloa": ["sinaloa", "culiacan", "mazatlan"],
+    "Sonora": ["sonora", "hermosillo", "nogales"],
+    "Tabasco": ["tabasco", "villahermosa"],
+    "Tamaulipas": ["tamaulipas", "tampico", "reynosa", "nuevo laredo"],
+    "Tlaxcala": ["tlaxcala"],
+    "Veracruz": ["veracruz", "xalapa", "coatzacoalcos"],
+    "Yucatán": ["yucatan", "merida"],
+    "Zacatecas": ["zacatecas"],
 }
 
-_NORMALIZE_PATTERN = re.compile(r"[^a-z0-9\s]")
+_STRIP_PATTERN = re.compile(r"[^a-z0-9\s]")
 
 
 def _normalize(text: str) -> str:
-    # Strip all punctuation (not just collapse it to space) so "Jalisco,"
-    # or "Jalisco." match the same as a bare "Jalisco" — word-boundary
-    # checks below assume tokens are separated by whitespace only.
-    return re.sub(r"\s+", " ", _NORMALIZE_PATTERN.sub(" ", text.lower())).strip()
+    # Strip accents first (México -> Mexico) before discarding remaining
+    # punctuation, so accented and unaccented input both match the same
+    # unaccented aliases. Word-boundary checks below assume tokens are
+    # separated by whitespace only.
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    without_accents = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return re.sub(r"\s+", " ", _STRIP_PATTERN.sub(" ", without_accents)).strip()
 
 
 def detect_state(text: str) -> str | None:

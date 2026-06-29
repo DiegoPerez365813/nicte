@@ -88,13 +88,130 @@ SOURCES: list[LawSource] = [
                "https://legislacion.edomex.gob.mx/sites/legislacion.edomex.gob.mx/files/files/pdf/cod/vig/codvig006.pdf"),
     LawSource("CCMEX", "Código Civil del Estado de México", "civil", "Estado de México",
                "https://legislacion.edomex.gob.mx/sites/legislacion.edomex.gob.mx/files/files/pdf/cod/vig/codvig001.pdf"),
+
+    # Remaining 28 states, completing all-32-state coverage.
+    LawSource("CPAGS", "Código Penal para el Estado de Aguascalientes", "penal", "Aguascalientes",
+               "https://congresoags.gob.mx/agenda_legislativa/leyes/descargarPdf/2481"),
+    LawSource("CCAGS", "Código Civil del Estado de Aguascalientes", "civil", "Aguascalientes",
+               "https://eservicios2.aguascalientes.gob.mx/NormatecaAdministrador/archivos/EDO-4-1.pdf"),
+    LawSource("CPBC", "Código Penal para el Estado de Baja California", "penal", "Baja California",
+               "https://transparencia.pjbc.gob.mx/documentos/pdfs/Codigos/CodigoPenal.pdf"),
+    LawSource("CCBC", "Código Civil para el Estado de Baja California", "civil", "Baja California",
+               "https://transparencia.pjbc.gob.mx/documentos/pdfs/Codigos/CodigoCivil.pdf"),
+    LawSource("CPBCS", "Código Penal para el Estado Libre y Soberano de Baja California Sur", "penal", "Baja California Sur",
+               "https://tribunalbcs.gob.mx/admin/imgDep/Tribunal/CodigoPenal/C%C3%B3digo%20Penal%20BCS%2024-04-2023.pdf"),
+    LawSource("CCBCS", "Código Civil para el Estado Libre y Soberano de Baja California Sur", "civil", "Baja California Sur",
+               "https://tribunalbcs.gob.mx/admin/imgDep/Tribunal/codigo%20civil/C%C3%B3digo%20Civil%20actualizado%20al%2020%20de%20Julio%20de%202022.pdf"),
+    LawSource("CPCAM", "Código Penal del Estado de Campeche", "penal", "Campeche",
+               "https://campeche.gob.mx/wp-content/uploads/2022/10/Codigo_Penal_del_Estado_de_Campeche.pdf"),
+    LawSource("CCCAM", "Código Civil del Estado de Campeche", "civil", "Campeche",
+               "https://transparenciafiscal.campeche.gob.mx/images/Documentos/Bloque%201/Codigo%20Civil%20del%20Estado%20de%20Campeche.pdf"),
+    LawSource("CPCHIS", "Código Penal para el Estado de Chiapas", "penal", "Chiapas",
+               "https://poderjudicialchiapas.gob.mx/storage/legislacion/0595CE33-5884-48EE-92CB-EC58FF38283A.pdf"),
+    LawSource("CCCHIS", "Código Civil del Estado de Chiapas", "civil", "Chiapas",
+               "https://poderjudicialchiapas.gob.mx/storage/legislacion/07EEACD0-560E-4497-A076-9ADE2D7864F8.pdf"),
+    LawSource("CPCHIH", "Código Penal del Estado de Chihuahua", "penal", "Chihuahua",
+               "https://chihuahua.gob.mx/atach2/justiciapenal/uploads/cod%20penal.pdf"),
+    LawSource("CCCHIH", "Código Civil del Estado de Chihuahua", "civil", "Chihuahua",
+               "https://www.congresochihuahua2.gob.mx/biblioteca/codigos/archivosCodigos/77.pdf"),
+    LawSource("CPCOAH", "Código Penal del Estado de Coahuila de Zaragoza", "penal", "Coahuila",
+               "https://www.congresocoahuila.gob.mx/transparencia/03/Leyes_Coahuila/coa08_Nuevo_Codigo.pdf"),
+    LawSource("CCCOAH", "Código Civil para el Estado de Coahuila de Zaragoza", "civil", "Coahuila",
+               "https://www.coahuilatransparente.gob.mx/codigos/documentos_codigos/CODIGO%20CIVIL%20PARA%20EL%20ESTADO.pdf"),
+    LawSource("CPCOL", "Código Penal para el Estado de Colima", "penal", "Colima",
+               "https://congresocol.gob.mx/web/Sistema/uploads/LegislacionEstatal/Codigos/codigo_penal_09sept2024.pdf"),
+    LawSource("CCCOL", "Código Civil para el Estado de Colima", "civil", "Colima",
+               "https://docs.mexico.justia.com/estatales/colima/codigo-civil-para-el-estado-de-colima.pdf"),
+    LawSource("CPDGO", "Código Penal del Estado Libre y Soberano de Durango", "penal", "Durango",
+               "https://congresodurango.gob.mx/Archivos/legislacion/CODIGO%20PENAL%20(NUEVO).pdf"),
+    LawSource("CCDGO", "Código Civil del Estado de Durango", "civil", "Durango",
+               "https://congresodurango.gob.mx/Archivos/legislacion/CODIGO%20CIVIL.pdf"),
+    LawSource("CPGTO", "Código Penal del Estado de Guanajuato", "penal", "Guanajuato",
+               "https://sistemaestatalanticorrupcion.guanajuato.gob.mx/wp-content/uploads/2021/07/CODIGO-PENAL-DEL-ESTADO-DE-GUANAJUATO.pdf"),
+    LawSource("CCGTO", "Código Civil para el Estado de Guanajuato", "civil", "Guanajuato",
+               "https://congreso-gto.s3.amazonaws.com/uploads/reforma/pdf/3596/CCG_REF_27Dic2024.pdf"),
+    LawSource("CPGRO", "Código Penal para el Estado Libre y Soberano de Guerrero", "penal", "Guerrero",
+               "https://www.guerrero.gob.mx/wp-content/uploads/2026/02/CPEGN499.pdf"),
+    LawSource("CCGRO", "Código Civil del Estado Libre y Soberano de Guerrero", "civil", "Guerrero",
+               "https://armonizacion.cndh.org.mx/Content/Files/LGBTTTI/CodCivilFam/13Codigo_CE_Gro.pdf"),
+    LawSource("CPHGO", "Código Penal para el Estado de Hidalgo", "penal", "Hidalgo",
+               "https://www.congreso-hidalgo.gob.mx/biblioteca_legislativa/leyes_cintillo/Codigo%20Penal%20para%20el%20Estado%20de%20Hidalgo.pdf"),
+    LawSource("CCHGO", "Código Civil para el Estado de Hidalgo", "civil", "Hidalgo",
+               "https://www.congreso-hidalgo.gob.mx/biblioteca_legislativa/leyes_cintillo/Codigo%20Civil.pdf"),
+    LawSource("CPMICH", "Código Penal del Estado de Michoacán", "penal", "Michoacán",
+               "https://michoacan.gob.mx/wp-content/uploads/2025/10/CO%CC%81DIGO-PENAL-DEL-ESTADO-DE-MICHOACA%CC%81N.pdf"),
+    LawSource("CCMICH", "Código Civil para el Estado de Michoacán", "civil", "Michoacán",
+               "http://ordenjuridico.gob.mx/Publicaciones/DI2005/pdf/MICH1.pdf"),
+    LawSource("CPMOR", "Código Penal para el Estado de Morelos", "penal", "Morelos",
+               "http://marcojuridico.morelos.gob.mx/archivos/codigos/pdf/CPENALEM.pdf"),
+    LawSource("CCMOR", "Código Civil para el Estado Libre y Soberano de Morelos", "civil", "Morelos",
+               "http://marcojuridico.morelos.gob.mx/archivos/codigos/pdf/CCIVILEM.pdf"),
+    LawSource("CPNAY", "Código Penal para el Estado de Nayarit", "penal", "Nayarit",
+               "https://congresonayarit.gob.mx/wp-content/uploads/QUE_HACEMOS/LEGISLACION_ESTATAL/codigos/codigo_penal_nuevo.pdf"),
+    LawSource("CCNAY", "Código Civil para el Estado de Nayarit", "civil", "Nayarit",
+               "https://congresonayarit.gob.mx/wp-content/uploads/QUE_HACEMOS/LEGISLACION_ESTATAL/codigos/codigo_civil_estado_de_nayarit.pdf"),
+    LawSource("CPOAX", "Código Penal para el Estado de Oaxaca", "penal", "Oaxaca",
+               "https://www.congresooaxaca.gob.mx/docs66.congresooaxaca.gob.mx/legislacion_estatal/Codigo_Penal_para_el_Edo_de_Oax_(_Ref_dto_769_aprob_LXVI_Legis_18_sep_2025_PO_41_8a_secc_11_oct_2025).pdf"),
+    LawSource("CCOAX", "Código Civil para el Estado de Oaxaca", "civil", "Oaxaca",
+               "https://armonizacion.cndh.org.mx/Content/Files/DMVLV/CC/OAX-CC.pdf"),
+    LawSource("CPPUE", "Código Penal del Estado Libre y Soberano de Puebla", "penal", "Puebla",
+               "https://ojp.puebla.gob.mx/media/k2/attachments/Codigo_Penal_del_Estado_Libre_y_Soberano_de_Puebla_2EV_15122025.pdf"),
+    LawSource("CCPUE", "Código Civil para el Estado Libre y Soberano de Puebla", "civil", "Puebla",
+               "https://ieepuebla.org.mx/2017/Normatividad/Codigo_Civil_del_edo_libre_y_soberano_de_puebla_29032016.pdf"),
+    LawSource("CPQRO", "Código Penal para el Estado de Querétaro", "penal", "Querétaro",
+               "https://site.legislaturaqueretaro.gob.mx/CloudPLQ/InvEst/Codigos/COD-ID-07.pdf"),
+    LawSource("CCQRO", "Código Civil del Estado de Querétaro", "civil", "Querétaro",
+               "https://www.poderjudicialqro.gob.mx/biblio/leeDoc.php?cual=844&tabla=tbiblioteca_historial"),
+    LawSource("CPQROO", "Código Penal para el Estado Libre y Soberano de Quintana Roo", "penal", "Quintana Roo",
+               "https://juventud.qroo.gob.mx/wp-content/uploads/2024/08/CODIGO-PENAL-PARA-EL-ESTADO-LIBRE-Y-SOBERANO-DE-QUINTANA-ROO.pdf"),
+    LawSource("CCQROO", "Código Civil para el Estado de Quintana Roo", "civil", "Quintana Roo",
+               "https://documentos.congresoqroo.gob.mx/codigos/C2-XVII-31052023-20230608T145647-C1720220531062.pdf"),
+    LawSource("CPSLP", "Código Penal para el Estado de San Luis Potosí", "penal", "San Luis Potosí",
+               "https://armonizacion.cndh.org.mx/Content/Files/LGBTTTI/CodPenal/24Codigo_PE_SLP.pdf"),
+    LawSource("CCSLP", "Código Civil para el Estado de San Luis Potosí", "civil", "San Luis Potosí",
+               "https://armonizacion.cndh.org.mx/Content/Files/DMVLV/CC/SLP-CC.pdf"),
+    LawSource("CPSIN", "Código Penal para el Estado de Sinaloa", "penal", "Sinaloa",
+               "https://www.congresosinaloa.gob.mx/images/congreso/leyes/zip/codigo_penal_28-dic-2016.pdf"),
+    LawSource("CCSIN", "Código Civil para el Estado de Sinaloa", "civil", "Sinaloa",
+               "https://media.transparencia.sinaloa.gob.mx/uploads/files/105/codigo%20civil.pdf"),
+    LawSource("CPSON", "Código Penal para el Estado de Sonora", "penal", "Sonora",
+               "https://coespo.sonora.gob.mx/images/documentos/gepea/FunLegales/CODIGO_PENAL.pdf"),
+    LawSource("CCSON", "Código Civil para el Estado de Sonora", "civil", "Sonora",
+               "https://docs.mexico.justia.com/estatales/sonora/codigo-civil-del-estado-de-sonora.pdf"),
+    LawSource("CPTAB", "Código Penal para el Estado de Tabasco", "penal", "Tabasco",
+               "https://congresotabasco.gob.mx/wp-content/uploads/2026/05/Codigo-Penal-para-el-Estado-de-Tabasco-1.pdf"),
+    LawSource("CCTAB", "Código Civil para el Estado de Tabasco", "civil", "Tabasco",
+               "https://tsj-tabasco.gob.mx/resources/pdf/biblioteca/codigo_civil.pdf"),
+    LawSource("CPTAMS", "Código Penal para el Estado de Tamaulipas", "penal", "Tamaulipas",
+               "https://po.tamaulipas.gob.mx/wp-content/uploads/2020/08/Codigo_Penal.pdf"),
+    LawSource("CCTAMS", "Código Civil para el Estado de Tamaulipas", "civil", "Tamaulipas",
+               "http://po.tamaulipas.gob.mx/wp-content/uploads/2026/03/Codigo_Civil.pdf"),
+    LawSource("CPTLAX", "Código Penal para el Estado Libre y Soberano de Tlaxcala", "penal", "Tlaxcala",
+               "https://tsjtlaxcala.gob.mx/transparencia/Fracciones_a63/I/codigos/codigopenaltlaxcala.pdf"),
+    LawSource("CCTLAX", "Código Civil para el Estado de Tlaxcala", "civil", "Tlaxcala",
+               "https://armonizacion.cndh.org.mx/Content/Files/LGBTTTI/CodCivilFam/29Codigo_CE_Tlax.pdf"),
+    LawSource("CPVER", "Código Penal para el Estado Libre y Soberano de Veracruz de Ignacio de la Llave", "penal", "Veracruz",
+               "https://docs.mexico.justia.com/estatales/veracruz/codigo-penal-para-el-estado-libre-y-soberano-de-veracruz-de-ignacio-de-la-llave.pdf"),
+    LawSource("CCVER", "Código Civil para el Estado de Veracruz de Ignacio de la Llave", "civil", "Veracruz",
+               "https://www.legisver.gob.mx/leyes/LeyesPDF/CCIVIL07042025.pdf"),
+    LawSource("CPYUC", "Código Penal del Estado de Yucatán", "penal", "Yucatán",
+               "https://docs.mexico.justia.com/estatales/yucatan/codigo-penal-del-estado-de-yucatan.pdf"),
+    LawSource("CCYUC", "Código Civil del Estado de Yucatán", "civil", "Yucatán",
+               "https://congresoyucatan.gob.mx/storage/legislacion/codigos/ca9da342d9e6c5faf13d9e39e9ec6591_2022-06-10.pdf"),
+    LawSource("CPZAC", "Código Penal para el Estado de Zacatecas", "penal", "Zacatecas",
+               "https://www.asezac.gob.mx/pages/transparencia/fracc_i/codigo_penal_estado_zacatecas.pdf"),
+    LawSource("CCZAC", "Código Civil del Estado de Zacatecas", "civil", "Zacatecas",
+               "https://cgj.zacatecas.gob.mx/MJE/CODIGOS/C%C3%93DIGO%20CIVIL%20DEL%20ESTADO%20DE%20ZACATECA1.pdf"),
 ]
 
 ARTICLE_PATTERN = re.compile(
     # \d+(\.\d+)? handles decimal article numbering used by some state codes
     # (e.g. Estado de México: "Artículo 1.1", "Artículo 1.5 Bis") in addition
-    # to the plain \d+ numbering most federal/state codes use.
-    r"Art[íi]culo\s+(\d+(?:\.\d+)?(?:\s*(?:Bis|Ter|Qu[aá]ter|Quinquies)\b)?(?:[-–]\w+)?)\s*[.\-–]",
+    # to the plain \d+ numbering most federal/state codes use. The terminator
+    # is optional and may include ° (degree sign) because older codes like
+    # Veracruz's write "ARTICULO 1°" or even just "ARTICULO 10 " (no
+    # punctuation at all) before the article body starts.
+    r"Art[íi]culo\s+(\d+(?:\.\d+)?(?:\s*(?:Bis|Ter|Qu[aá]ter|Quinquies)\b)?(?:[-–]\w+)?)\s*(?:[.\-–°]\s*)?",
     re.IGNORECASE,
 )
 
@@ -183,11 +300,15 @@ def ingest_source(source: LawSource) -> int:
 
 def main() -> None:
     for source in SOURCES:
+        out_path = PROCESSED_DIR / f"{source.code}.json"
+        if out_path.exists():
+            print(f"[SKIP] {source.code} already processed", flush=True)
+            continue
         try:
             count = ingest_source(source)
-            print(f"[OK] {source.code} ({source.law_name}) -> {count} artículos")
+            print(f"[OK] {source.code} ({source.law_name}) -> {count} artículos", flush=True)
         except Exception as exc:  # noqa: BLE001 — one bad source must not stop the rest
-            print(f"[FAIL] {source.code}: {exc}")
+            print(f"[FAIL] {source.code}: {exc}", flush=True)
 
 
 if __name__ == "__main__":
