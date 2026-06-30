@@ -37,6 +37,7 @@ The SQL schema to create first in Supabase SQL editor:
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -51,6 +52,21 @@ _PROCESSED_DIR = Path(__file__).parent / "app" / "data" / "processed"
 _MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 _BATCH_SIZE = 256
 _DB_BATCH = 500
+
+# Parsed manually instead of handed to psycopg2 as a URI — passwords with
+# characters like "!" break naive URI parsing unless percent-encoded.
+_DSN_RE = re.compile(
+    r"^postgresql(?:\+\w+)?://(?P<user>[^:/@]+):(?P<password>.+)@(?P<host>[^:/@]+):(?P<port>\d+)/(?P<dbname>[^?]+)"
+)
+
+
+def _parse_dsn(url: str) -> dict:
+    match = _DSN_RE.match(url)
+    if not match:
+        raise ValueError(
+            "SUPABASE_DB_URL must look like postgresql://user:password@host:port/dbname"
+        )
+    return match.groupdict()
 
 
 def _load_corpus() -> list[dict]:
@@ -77,20 +93,32 @@ def main() -> None:
     corpus = _load_corpus()
     print(f"  {len(corpus)} articles loaded")
 
-    print("Loading sentence-transformer model…")
-    model = SentenceTransformer(_MODEL_NAME)
-
     texts = [doc["text"] for doc in corpus]
-    print(f"Encoding {len(texts)} texts in batches of {_BATCH_SIZE}…")
-    embeddings = model.encode(
-        texts,
-        batch_size=_BATCH_SIZE,
-        normalize_embeddings=True,
-        show_progress_bar=True,
-    )
+    cache_path = Path(__file__).parent / "_upload_embeddings_cache.npy"
+    if cache_path.exists():
+        print(f"Loading cached embeddings from {cache_path.name}…")
+        embeddings = np.load(cache_path)
+    else:
+        print("Loading sentence-transformer model…")
+        model = SentenceTransformer(_MODEL_NAME)
+        print(f"Encoding {len(texts)} texts in batches of {_BATCH_SIZE}…")
+        embeddings = model.encode(
+            texts,
+            batch_size=_BATCH_SIZE,
+            normalize_embeddings=True,
+            show_progress_bar=True,
+        )
+        np.save(cache_path, embeddings)
 
     print("Connecting to Supabase…")
-    conn = psycopg2.connect(db_url)
+    db_params = _parse_dsn(db_url)
+    conn = psycopg2.connect(
+        host=db_params["host"],
+        port=db_params["port"],
+        dbname=db_params["dbname"],
+        user=db_params["user"],
+        password=db_params["password"],
+    )
     cur = conn.cursor()
 
     sql = """

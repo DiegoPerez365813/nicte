@@ -8,6 +8,7 @@ backend/.env
 backend/server_log.txt
 backend/server_err.txt
 backend/app/data/embeddings_cache/
+backend/_upload_embeddings_cache.npy
 backend/ans.txt
 backend/ans2.txt
 
