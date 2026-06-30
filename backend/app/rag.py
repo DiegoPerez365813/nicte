@@ -1,74 +1,32 @@
-"""Minimal RAG retrieval layer.
+"""RAG retrieval layer backed by Supabase + pgvector.
 
-For this proof-of-concept slice, the vector index lives in memory
-(numpy cosine similarity) instead of pgvector — same retrieval contract,
-swappable backend later without touching callers.
+Retrieval strategy:
+  1. Encode query with sentence-transformers (384-dim, normalized).
+  2. Fetch top-200 candidates from Supabase using cosine similarity,
+     pre-filtered by jurisdiction (state → federal fallback).
+  3. Re-rank candidates with BM25 on their texts (catches exact legal
+     terms that embeddings may miss).
+  4. Return top-k above min_score threshold.
+
+Cold-start is ~30 s (model load) — no corpus or embedding build needed.
 """
 
-import hashlib
-import json
+from __future__ import annotations
+
+import math
+import re
+from collections import defaultdict
 from dataclasses import dataclass
-from pathlib import Path
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from app.area_classifier import classify_areas
-from app.bm25 import BM25Index
+from app.db import get_cursor
 
-_CACHE_DIR = Path(__file__).parent / "data" / "embeddings_cache"
+_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 
-from app.legal_corpus.civil import CIVIL_CORPUS
-from app.legal_corpus.familiar import FAMILIAR_CORPUS
-from app.legal_corpus.laboral import LABORAL_CORPUS
-from app.legal_corpus.penal import PENAL_CORPUS
-
-_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"  # decent ES coverage, small
-
-_PROCESSED_DIR = Path(__file__).parent / "data" / "processed"
-
-HAND_CURATED_CORPORA = [*LABORAL_CORPUS, *CIVIL_CORPUS, *PENAL_CORPUS, *FAMILIAR_CORPUS]
-
-
-def _load_ingested_corpora() -> list[dict]:
-    """Loads every law ingested by app/ingest.py (full official text, auto
-    -extracted per article). Falls back to the small hand-curated corpus
-    for any law that hasn't been ingested yet, so the API never has zero
-    coverage for a given area."""
-    if not _PROCESSED_DIR.exists():
-        return HAND_CURATED_CORPORA
-
-    chunks: list[dict] = []
-    ingested_codes: set[str] = set()
-    for json_path in sorted(_PROCESSED_DIR.glob("*.json")):
-        try:
-            docs = json.loads(json_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            continue
-        if docs:
-            chunks.extend(docs)
-            ingested_codes.add(json_path.stem)
-
-    if not chunks:
-        return HAND_CURATED_CORPORA
-
-    # Hand-curated entries stay as a safety net only for laws not yet ingested.
-    ingested_law_names = {c["law_name"] for c in chunks}
-    for fallback in HAND_CURATED_CORPORA:
-        if fallback["law_name"] not in ingested_law_names:
-            chunks.append(fallback)
-
-    return chunks
-
-
-ALL_CORPORA = _load_ingested_corpora()
-
-# Fixed catalog of constitutional defense/due-process rights — these don't
-# change per query, so they're looked up directly by article number instead
-# of through similarity search (which would be noisy for a "find me my
-# rights" intent). Each entry pairs a real ingested article with a
-# hand-written plain-language summary, since CPEUM Art. 20 in particular is
-# long and dense — quoting it raw isn't "comprensible" on its own.
+# Constitutional defense articles shown verbatim (looked up by law+article).
 DEFENSE_ARTICLES: list[dict] = [
     {
         "law_name": "Constitución Política de los Estados Unidos Mexicanos",
@@ -115,75 +73,156 @@ class RetrievedChunk:
     plain_summary: str | None = None
 
 
-def _corpus_fingerprint(texts: list[str]) -> str:
-    digest = hashlib.sha256()
-    for text in texts:
-        digest.update(text.encode("utf-8"))
-        digest.update(b"\x00")
-    return digest.hexdigest()
+# ---------------------------------------------------------------------------
+# Minimal BM25 used for re-ranking a small candidate set from pgvector
+# ---------------------------------------------------------------------------
+
+_TOKEN_RE = re.compile(r"\w+", re.UNICODE)
+
+
+def _tokenize(text: str) -> list[str]:
+    return _TOKEN_RE.findall(text.lower())
+
+
+class _BM25Reranker:
+    """BM25 over a small candidate set (not the full corpus)."""
+
+    def __init__(self, docs: list[str], k1: float = 1.5, b: float = 0.75) -> None:
+        self._k1 = k1
+        self._b = b
+        tokenized = [_tokenize(d) for d in docs]
+        self._n = len(tokenized)
+        avgdl = sum(len(t) for t in tokenized) / max(self._n, 1)
+        self._avgdl = avgdl
+        self._dl = [len(t) for t in tokenized]
+        df: dict[str, int] = defaultdict(int)
+        self._tf: list[dict[str, int]] = []
+        for tokens in tokenized:
+            freq: dict[str, int] = defaultdict(int)
+            for tok in tokens:
+                freq[tok] += 1
+            self._tf.append(dict(freq))
+            for tok in set(tokens):
+                df[tok] += 1
+        self._idf: dict[str, float] = {
+            tok: math.log((self._n - cnt + 0.5) / (cnt + 0.5) + 1)
+            for tok, cnt in df.items()
+        }
+
+    def score(self, query: str) -> np.ndarray:
+        query_tokens = _tokenize(query)
+        scores = np.zeros(self._n)
+        for tok in query_tokens:
+            if tok not in self._idf:
+                continue
+            idf = self._idf[tok]
+            for i, (tf, dl) in enumerate(zip(self._tf, self._dl)):
+                f = tf.get(tok, 0)
+                denom = f + self._k1 * (1 - self._b + self._b * dl / self._avgdl)
+                scores[i] += idf * f * (self._k1 + 1) / denom
+        return scores
+
+
+# ---------------------------------------------------------------------------
+
+def _vec_literal(arr: np.ndarray) -> str:
+    return "[" + ",".join(f"{x:.6f}" for x in arr.tolist()) + "]"
+
+
+def _fetch_candidates(
+    query_vec: np.ndarray,
+    state: str | None,
+    areas: list[str],
+    limit: int = 200,
+) -> list[dict]:
+    """Query Supabase for top-`limit` candidates, pre-filtered by jurisdiction."""
+    vec = _vec_literal(query_vec)
+    area_filter = "AND area = ANY(%s)" if areas else ""
+    area_params: list = [areas] if areas else []
+
+    rows: list[dict] = []
+
+    with get_cursor() as cur:
+        if state is not None:
+            # Try state-specific first
+            cur.execute(
+                f"""
+                SELECT id, law_name, jurisdiction, article_number, text,
+                       area, source_url,
+                       1 - (embedding <=> %s::vector) AS similarity
+                FROM articles
+                WHERE jurisdiction = %s {area_filter}
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s
+                """,
+                [vec, state, *area_params, vec, limit],
+            )
+            rows = [
+                dict(zip(
+                    ("id", "law_name", "jurisdiction", "article_number",
+                     "text", "area", "source_url", "similarity"),
+                    row,
+                ))
+                for row in cur.fetchall()
+            ]
+
+        if not rows or (state is not None and not any(r["similarity"] >= 0.3 for r in rows)):
+            # Fall back to federal-only
+            cur.execute(
+                f"""
+                SELECT id, law_name, jurisdiction, article_number, text,
+                       area, source_url,
+                       1 - (embedding <=> %s::vector) AS similarity
+                FROM articles
+                WHERE is_federal = true {area_filter}
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s
+                """,
+                [vec, *area_params, vec, limit],
+            )
+            rows = [
+                dict(zip(
+                    ("id", "law_name", "jurisdiction", "article_number",
+                     "text", "area", "source_url", "similarity"),
+                    row,
+                ))
+                for row in cur.fetchall()
+            ]
+
+    return rows
 
 
 class LegalRetriever:
     def __init__(self) -> None:
         self._model = SentenceTransformer(_MODEL_NAME)
-        self._corpus = ALL_CORPORA
-        texts = [doc["text"] for doc in self._corpus]
-        self._embeddings = self._load_or_build_embeddings(texts)
-        self._bm25 = BM25Index(texts)
-        self._area_indices: dict[str, np.ndarray] = {}
-        for area in {doc["area"] for doc in self._corpus}:
-            self._area_indices[area] = np.array(
-                [i for i, doc in enumerate(self._corpus) if doc["area"] == area]
-            )
-        self._by_law_and_article: dict[tuple[str, str], dict] = {
-            (doc["law_name"], doc["article_number"]): doc for doc in self._corpus
-        }
-        self._jurisdictions = np.array([doc["jurisdiction"] for doc in self._corpus])
-        self._is_federal = self._jurisdictions == "federal"
 
     def get_defense_articles(self) -> list[RetrievedChunk]:
-        """Fixed set of constitutional due-process/defense-rights articles,
-        each carrying a hand-written plain-language summary. Looked up by
-        article number rather than similarity search."""
         results = []
-        for entry in DEFENSE_ARTICLES:
-            doc = self._by_law_and_article.get((entry["law_name"], entry["article_number"]))
-            if doc is None:
-                continue
-            results.append(
-                RetrievedChunk(
-                    id=doc["id"],
-                    law_name=doc["law_name"],
-                    article_number=doc["article_number"],
-                    jurisdiction=doc["jurisdiction"],
-                    source_url=doc["source_url"],
-                    text=doc["text"],
-                    area=doc["area"],
-                    score=1.0,
-                    plain_summary=entry["plain_summary"],
+        with get_cursor() as cur:
+            for entry in DEFENSE_ARTICLES:
+                cur.execute(
+                    "SELECT id, law_name, jurisdiction, article_number, "
+                    "text, area, source_url FROM articles "
+                    "WHERE law_name = %s AND article_number = %s LIMIT 1",
+                    (entry["law_name"], entry["article_number"]),
                 )
-            )
+                row = cur.fetchone()
+                if row is None:
+                    continue
+                results.append(
+                    RetrievedChunk(
+                        id=row[0],
+                        law_name=row[1],
+                        jurisdiction=row[2],
+                        article_number=row[3],
+                        text=row[4],
+                        area=row[5],
+                        source_url=row[6],
+                        score=1.0,
+                        plain_summary=entry["plain_summary"],
+                    )
+                )
         return results
-
-    def _load_or_build_embeddings(self, texts: list[str]) -> np.ndarray:
-        # Re-embedding ~7k articles takes several minutes on CPU. Cache the
-        # result keyed by a hash of the corpus text so dev restarts (and
-        # prod redeploys with an unchanged corpus) skip straight to a
-        # disk load instead of recomputing every vector from scratch.
-        fingerprint = _corpus_fingerprint(texts)
-        cache_path = _CACHE_DIR / f"{fingerprint}.npy"
-
-        if cache_path.exists():
-            return np.load(cache_path)
-
-        embeddings = self._model.encode(texts, normalize_embeddings=True, show_progress_bar=True)
-
-        _CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        for stale in _CACHE_DIR.glob("*.npy"):
-            stale.unlink(missing_ok=True)
-        np.save(cache_path, embeddings)
-
-        return embeddings
 
     def retrieve(
         self,
@@ -194,75 +233,42 @@ class LegalRetriever:
         state: str | None = None,
     ) -> list[RetrievedChunk]:
         query_vec = self._model.encode([query], normalize_embeddings=True)[0]
-        semantic_scores = self._embeddings @ query_vec  # cosine sim (vectors normalized)
 
-        bm25_raw = self._bm25.score(query)
-        bm25_scores = np.zeros(len(self._corpus))
-        if bm25_raw:
-            max_bm25 = max(bm25_raw.values())
-            for doc_idx, raw_score in bm25_raw.items():
-                bm25_scores[doc_idx] = raw_score / max_bm25  # normalize to [0, 1]
+        areas = classify_areas(query)
+        candidates = _fetch_candidates(query_vec, state, areas)
 
-        # Hybrid score: dense embeddings catch paraphrase/concept matches,
-        # BM25 catches exact legal terminology embeddings tend to miss
-        # ("estupro", "pensión alimenticia") once the corpus has thousands
-        # of distractor articles.
-        combined_scores = semantic_weight * semantic_scores + (1 - semantic_weight) * bm25_scores
+        if not candidates:
+            return []
 
-        # Pre-filter to the 1-2 legal areas the query is likely about. This
-        # is the main lever against irrelevant matches: searching all ~7k
-        # articles lets stray shared words (e.g. "pasa") from completely
-        # unrelated areas outrank the genuinely relevant one. If no area
-        # matches confidently, fall back to the full corpus.
-        likely_areas = classify_areas(query)
-        if likely_areas:
-            allowed = np.concatenate([self._area_indices[a] for a in likely_areas if a in self._area_indices])
-            mask = np.full(len(self._corpus), False)
-            mask[allowed] = True
-            combined_scores = np.where(mask, combined_scores, -np.inf)
+        texts = [c["text"] for c in candidates]
+        sem_scores = np.array([c["similarity"] for c in candidates], dtype=float)
 
-        # Penal/civil/familiar law is mostly state jurisdiction in Mexico —
-        # ordinary crimes/disputes are governed exclusively by the state
-        # code, with the federal code (CPF/CCF) only covering a narrow set
-        # of federal-jurisdiction matters. Mixing both pools and ranking by
-        # raw score lets an irrelevant federal article (e.g. CPF's vehicle-
-        # theft article for a phone-theft question) outrank the actually
-        # applicable state article, since they happen to share vocabulary.
-        # So: when the state is known, search ONLY that state's articles
-        # first; fall back to federal-only if the state corpus has nothing
-        # relevant. When the state is unknown, default to federal-only
-        # (excluding other states' codes, which would just be wrong).
-        if state is not None:
-            state_scores = np.where(self._jurisdictions == state, combined_scores, -np.inf)
-            if np.any(state_scores >= min_score):
-                combined_scores = state_scores
-            else:
-                federal_scores = np.where(self._is_federal, combined_scores, -np.inf)
-                if np.any(federal_scores >= min_score):
-                    combined_scores = federal_scores
-        else:
-            federal_scores = np.where(self._is_federal, combined_scores, -np.inf)
-            if np.any(federal_scores >= min_score):
-                combined_scores = federal_scores
+        bm25 = _BM25Reranker(texts)
+        bm25_raw = bm25.score(query)
+        max_bm25 = bm25_raw.max()
+        bm25_scores = bm25_raw / max_bm25 if max_bm25 > 0 else bm25_raw
 
-        ranked_idx = np.argsort(combined_scores)[::-1][:top_k]
+        combined = semantic_weight * sem_scores + (1 - semantic_weight) * bm25_scores
+
+        ranked_idx = np.argsort(combined)[::-1]
 
         results = []
         for idx in ranked_idx:
-            score = float(combined_scores[idx])
-            if score < min_score:
-                continue
-            doc = self._corpus[idx]
+            if float(combined[idx]) < min_score:
+                break
+            if len(results) >= top_k:
+                break
+            c = candidates[idx]
             results.append(
                 RetrievedChunk(
-                    id=doc["id"],
-                    law_name=doc["law_name"],
-                    article_number=doc["article_number"],
-                    jurisdiction=doc["jurisdiction"],
-                    source_url=doc["source_url"],
-                    text=doc["text"],
-                    area=doc["area"],
-                    score=score,
+                    id=c["id"],
+                    law_name=c["law_name"],
+                    jurisdiction=c["jurisdiction"],
+                    article_number=c["article_number"],
+                    text=c["text"],
+                    area=c["area"],
+                    source_url=c["source_url"],
+                    score=float(combined[idx]),
                 )
             )
         return results

@@ -10,12 +10,14 @@ services:
     runtime: python
     plan: standard
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python -c "from app.rag import RAGRetriever; RAGRetriever()"
+    buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
-      # Definir en el dashboard de Render (no se versiona la llave).
+      # Definir en el dashboard de Render (no se versionan las llaves).
       - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SUPABASE_DB_URL
         sync: false
       - key: ANTHROPIC_MODEL
         value: claude-sonnet-4-6
