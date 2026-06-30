@@ -38,20 +38,28 @@ def _parse_dsn(url: str) -> dict:
 
 _DB_PARAMS = _parse_dsn(os.environ["SUPABASE_DB_URL"])
 
-_pool = psycopg2.pool.ThreadedConnectionPool(
-    minconn=1,
-    maxconn=10,
-    host=_DB_PARAMS["host"],
-    port=_DB_PARAMS["port"],
-    dbname=_DB_PARAMS["dbname"],
-    user=_DB_PARAMS["user"],
-    password=_DB_PARAMS["password"],
-)
+_pool: psycopg2.pool.ThreadedConnectionPool | None = None
+
+
+def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
+    global _pool
+    if _pool is None:
+        _pool = psycopg2.pool.ThreadedConnectionPool(
+            minconn=1,
+            maxconn=10,
+            host=_DB_PARAMS["host"],
+            port=_DB_PARAMS["port"],
+            dbname=_DB_PARAMS["dbname"],
+            user=_DB_PARAMS["user"],
+            password=_DB_PARAMS["password"],
+        )
+    return _pool
 
 
 @contextmanager
 def get_cursor() -> Generator[psycopg2.extensions.cursor, None, None]:
-    conn = _pool.getconn()
+    pool = _get_pool()
+    conn = pool.getconn()
     try:
         with conn.cursor() as cur:
             yield cur
@@ -60,4 +68,4 @@ def get_cursor() -> Generator[psycopg2.extensions.cursor, None, None]:
         conn.rollback()
         raise
     finally:
-        _pool.putconn(conn)
+        pool.putconn(conn)
