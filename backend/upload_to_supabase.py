@@ -21,7 +21,7 @@ The SQL schema to create first in Supabase SQL editor:
         text        TEXT NOT NULL,
         area        TEXT NOT NULL,
         source_url  TEXT NOT NULL DEFAULT '',
-        embedding   vector(384)
+        embedding   vector(1024)
     );
 
     CREATE INDEX IF NOT EXISTS articles_embedding_idx
@@ -44,13 +44,14 @@ from pathlib import Path
 import numpy as np
 import psycopg2
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
 
 load_dotenv()
 
+# Add app/ to path so we can import embeddings module
+sys.path.insert(0, str(Path(__file__).parent))
+from app.embeddings import embed_texts  # noqa: E402
+
 _PROCESSED_DIR = Path(__file__).parent / "app" / "data" / "processed"
-_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
-_BATCH_SIZE = 256
 _DB_BATCH = 500
 
 # Parsed manually instead of handed to psycopg2 as a URI — passwords with
@@ -96,18 +97,20 @@ def main() -> None:
     texts = [doc["text"] for doc in corpus]
     cache_path = Path(__file__).parent / "_upload_embeddings_cache.npy"
     if cache_path.exists():
-        print(f"Loading cached embeddings from {cache_path.name}…")
-        embeddings = np.load(cache_path)
+        cached = np.load(cache_path)
+        if cached.shape[1] == 1024:
+            print(f"Loading cached embeddings from {cache_path.name}…")
+            embeddings = cached
+        else:
+            print("Cache is from old model (384 dims), re-encoding with OpenAI…")
+            cache_path.unlink()
+            embeddings = None
     else:
-        print("Loading sentence-transformer model…")
-        model = SentenceTransformer(_MODEL_NAME)
-        print(f"Encoding {len(texts)} texts in batches of {_BATCH_SIZE}…")
-        embeddings = model.encode(
-            texts,
-            batch_size=_BATCH_SIZE,
-            normalize_embeddings=True,
-            show_progress_bar=True,
-        )
+        embeddings = None
+
+    if embeddings is None:
+        print(f"Encoding {len(texts)} texts via OpenAI API…")
+        embeddings = embed_texts(texts, show_progress=True)
         np.save(cache_path, embeddings)
 
     print("Connecting to Supabase…")

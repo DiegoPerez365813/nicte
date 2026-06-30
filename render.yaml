@@ -1,14 +1,13 @@
 # Render Blueprint para el backend de Nicté (FastAPI + RAG).
 # Render lee este archivo desde la raíz del repo. El servicio vive en /backend.
 #
-# Nota de recursos: el arranque carga sentence-transformers (PyTorch) y
-# construye el índice de embeddings sobre todo el corpus en memoria. El plan
-# free (512 MB RAM) hace Out-Of-Memory; usar al menos "standard" (2 GB).
+# Embeddings via Voyage AI API (voyage-law-2) — no PyTorch local.
+# El plan free (512 MB) es suficiente; standard solo si se requiere más RAM.
 services:
   - type: web
     name: nicte-api
     runtime: python
-    plan: standard
+    plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -16,6 +15,8 @@ services:
     envVars:
       # Definir en el dashboard de Render (no se versionan las llaves).
       - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: VOYAGE_API_KEY
         sync: false
       - key: SUPABASE_DB_URL
         sync: false
