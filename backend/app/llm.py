@@ -308,7 +308,7 @@ def _anthropic_generate(
         user_prompt += _DEFENSE_INSTRUCTIONS.format(defense_block=defense_block) + "\n\n"
 
     if municipality:
-        user_prompt += municipal_contacts_block(municipality)
+        user_prompt += municipal_contacts_block(municipality, state)
     elif state:
         user_prompt += _state_institutions_block(state)
 

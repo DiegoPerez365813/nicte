@@ -18,7 +18,11 @@ from app.safety import (
     validate_citations,
 )
 from app.schemas import ChatRequest, ChatResponse, Citation
-from app.municipal_contacts import detect_municipality, municipal_contacts_block
+from app.municipal_contacts import (
+    detect_municipality,
+    extract_municipality_name,
+    municipal_contacts_block,
+)
 from app.session_store import (
     append_history,
     get_history,
@@ -66,10 +70,13 @@ def chat_message(request: ChatRequest) -> ChatResponse:
             safety_flag="emergency",
         )
 
-    # Detect municipality for hyper-local contact info (contraloría, DIF, etc.)
-    mentioned_municipality = detect_municipality(request.message)
-    if mentioned_municipality:
-        set_state(session_id, mentioned_municipality)  # municipality implies state too via contacts
+    # Detect municipality for hyper-local contact info (contraloría, DIF, etc.).
+    # First try the ~65 curated municipalities (exact phone numbers); if none
+    # matches, fall back to extracting any municipality name from free text so
+    # all 2,478 municipalities/alcaldías get a valid generic contact block.
+    mentioned_municipality = detect_municipality(request.message) or extract_municipality_name(
+        request.message
+    )
 
     # Remember the user's state as soon as it's mentioned, on every message
     # regardless of which branch handles it below — most penal/civil/familiar

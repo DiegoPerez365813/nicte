@@ -757,8 +757,55 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", _STRIP.sub(" ", s)).strip()
 
 
+# Comisión Estatal de Derechos Humanos por estado — la vía estatal para
+# quejas de abuso de autoridad cuando el municipio no tiene datos curados.
+CEDH_BY_STATE: dict[str, str] = {
+    "Aguascalientes": "Comisión de Derechos Humanos del Estado de Aguascalientes (CDHEA)",
+    "Baja California": "Comisión Estatal de los Derechos Humanos de Baja California",
+    "Baja California Sur": "Comisión Estatal de los Derechos Humanos de BCS",
+    "Campeche": "Comisión de Derechos Humanos del Estado de Campeche (CODHECAM)",
+    "Chiapas": "Comisión Estatal de los Derechos Humanos de Chiapas (CEDH)",
+    "Chihuahua": "Comisión Estatal de los Derechos Humanos de Chihuahua (CEDH)",
+    "Coahuila": "Comisión de los Derechos Humanos del Estado de Coahuila (CDHEC)",
+    "Colima": "Comisión de Derechos Humanos del Estado de Colima (CDHEC)",
+    "Ciudad de México": "Comisión de Derechos Humanos de la Ciudad de México (CDHCM)",
+    "Durango": "Comisión Estatal de Derechos Humanos de Durango (CEDH)",
+    "Estado de México": "Comisión de Derechos Humanos del Estado de México (CODHEM)",
+    "Guanajuato": "Procuraduría de los Derechos Humanos del Estado de Guanajuato",
+    "Guerrero": "Comisión de los Derechos Humanos del Estado de Guerrero (CODDEHUM)",
+    "Hidalgo": "Comisión de Derechos Humanos del Estado de Hidalgo (CDHEH)",
+    "Jalisco": "Comisión Estatal de Derechos Humanos Jalisco (CEDHJ)",
+    "Michoacán": "Comisión Estatal de los Derechos Humanos de Michoacán (CEDH)",
+    "Morelos": "Comisión de Derechos Humanos del Estado de Morelos (CDHEM)",
+    "Nayarit": "Comisión de Defensa de los Derechos Humanos para el Estado de Nayarit",
+    "Nuevo León": "Comisión Estatal de Derechos Humanos de Nuevo León (CEDHNL)",
+    "Oaxaca": "Defensoría de los Derechos Humanos del Pueblo de Oaxaca (DDHPO)",
+    "Puebla": "Comisión de Derechos Humanos del Estado de Puebla (CDH Puebla)",
+    "Querétaro": "Defensoría de los Derechos Humanos de Querétaro (DDHQ)",
+    "Quintana Roo": "Comisión de los Derechos Humanos del Estado de Quintana Roo (CDHEQROO)",
+    "San Luis Potosí": "Comisión Estatal de Derechos Humanos de San Luis Potosí (CEDH)",
+    "Sinaloa": "Comisión Estatal de los Derechos Humanos de Sinaloa (CEDH)",
+    "Sonora": "Comisión Estatal de Derechos Humanos de Sonora (CEDH)",
+    "Tabasco": "Comisión Estatal de los Derechos Humanos de Tabasco (CEDH)",
+    "Tamaulipas": "Comisión de Derechos Humanos del Estado de Tamaulipas (CODHET)",
+    "Tlaxcala": "Comisión Estatal de Derechos Humanos de Tlaxcala (CEDH)",
+    "Veracruz": "Comisión Estatal de Derechos Humanos de Veracruz (CEDH)",
+    "Yucatán": "Comisión de Derechos Humanos del Estado de Yucatán (CODHEY)",
+    "Zacatecas": "Comisión de Derechos Humanos del Estado de Zacatecas (CDHEZ)",
+}
+
+
+def _slugify_domain(municipality: str) -> str:
+    """Best-effort guess of the municipality's official domain. Most Mexican
+    municipalities publish at <nombre>.gob.mx. It's a heuristic, not a
+    guarantee — the generic block tells the user to verify it."""
+    base = _norm(municipality).replace(" ", "")
+    return f"{base}.gob.mx"
+
+
 def detect_municipality(text: str) -> str | None:
-    """Returns canonical municipality name if mentioned in text, else None."""
+    """Returns curated canonical municipality name if mentioned, else None.
+    Only matches the ~65 municipalities with hand-verified contact data."""
     normalized = _norm(text)
     for municipality, aliases in MUNICIPAL_ALIASES.items():
         for alias in sorted(aliases, key=len, reverse=True):
@@ -767,22 +814,92 @@ def detect_municipality(text: str) -> str | None:
     return None
 
 
+# Patterns that introduce a municipality name in free text: "municipio de X",
+# "en el municipio de X", "soy de X", "vivo en X", "aquí en X". Captures the
+# name that follows, up to a delimiter.
+_MUNI_PATTERNS = [
+    re.compile(r"municipio de ([a-zñáéíóú][a-zñáéíóú\s]{2,40}?)(?:[,.;]|$| en | del | de la )", re.IGNORECASE),
+    re.compile(r"(?:soy|vivo|radico|estoy|resido|aqui) (?:de|en|por) ([a-zñáéíóú][a-zñáéíóú\s]{2,40}?)(?:[,.;]|$| en | del )", re.IGNORECASE),
+]
+
+# Words that are NOT municipality names even if they follow the pattern.
+_MUNI_STOPWORDS = {
+    "mi", "la", "el", "un", "una", "aqui", "alla", "casa", "trabajo",
+    "mexico", "cdmx", "aca", "este", "ese", "esta",
+}
+
+
+def extract_municipality_name(text: str) -> str | None:
+    """Pulls a plausible municipality name out of free text using surface
+    patterns, for the ~2,400 municipalities without curated contacts. Returns
+    the name in title case, or None. This is intentionally loose — a wrong
+    guess just produces a generic 'verify locally' block, never bad legal info."""
+    for pattern in _MUNI_PATTERNS:
+        m = pattern.search(text)
+        if m:
+            candidate = m.group(1).strip()
+            if _norm(candidate) in _MUNI_STOPWORDS or len(candidate) < 3:
+                continue
+            # Title-case each word, keep it short (max 4 words)
+            words = candidate.split()[:4]
+            return " ".join(w.capitalize() for w in words)
+    return None
+
+
 def get_municipal_contacts(municipality: str) -> dict[str, str] | None:
     return MUNICIPAL_CONTACTS.get(municipality)
 
 
-def municipal_contacts_block(municipality: str) -> str:
-    """Formatted block to inject into LLM prompt."""
+def _generic_municipal_block(municipality: str, state: str | None) -> str:
+    """Builds a valid contact block for ANY of Mexico's 2,478 municipalities/
+    alcaldías from naming conventions that hold nationwide, even without a
+    curated entry. Every Mexican municipality has a Contraloría, a DIF, a
+    Juez Cívico/Municipal, and Protección Civil; every state has a CEDH."""
+    domain = _slugify_domain(municipality)
+    cedh = CEDH_BY_STATE.get(state or "", "la Comisión Estatal de Derechos Humanos de tu estado")
+    state_label = f" ({state})" if state else ""
+
+    is_cdmx = state == "Ciudad de México"
+    org_word = "Alcaldía" if is_cdmx else "Municipio"
+    reglamento = (
+        "Reglamento de Policía y Buen Gobierno / Ley de Cultura Cívica de la CDMX"
+        if is_cdmx
+        else f"Reglamento de Policía y Buen Gobierno / Bando de Policía del Municipio de {municipality}"
+    )
+
+    lines = [
+        f"\nCONTACTOS PARA {municipality.upper()}{state_label.upper()}:",
+        "(Datos construidos con la estructura estándar de los municipios "
+        "mexicanos — verifica el teléfono exacto en el sitio oficial, pues "
+        "cambia con cada administración.)",
+        "• Emergencias: 911 (nacional, cubre todo el territorio)",
+        "• Denuncia anónima: 089 (nacional)",
+        f"• Quejas contra policía municipal / abuso de autoridad: Contraloría "
+        f"Interna del {org_word} de {municipality}, en el Palacio Municipal / "
+        f"Presidencia Municipal. También la {cedh}.",
+        f"• Atención a familia, menores y violencia familiar: Sistema DIF "
+        f"del {org_word} de {municipality}.",
+        f"• Infracciones y faltas administrativas: Juzgado Cívico / Juez "
+        f"Calificador del {org_word} de {municipality}.",
+        f"• Protección Civil del {org_word} de {municipality}.",
+        f"• Sitio oficial probable: {domain} (verifícalo; si no existe, "
+        f"busca '{municipality} {state or ''} gobierno municipal').",
+        f"• Normativa local aplicable: {reglamento}.",
+        "",
+        "Da estos contactos de forma útil según el caso del usuario. Sé claro "
+        "en que el teléfono debe confirmarlo en el sitio oficial.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def municipal_contacts_block(municipality: str, state: str | None = None) -> str:
+    """Formatted block to inject into the LLM prompt. Uses curated data when
+    available, otherwise builds a valid generic block from the municipality
+    name + state so all 2,478 municipalities are covered."""
     data = get_municipal_contacts(municipality)
     if not data:
-        return (
-            f"\nMUNICIPIO DETECTADO: {municipality}\n"
-            "No tengo los contactos específicos de este municipio, pero el usuario puede:\n"
-            "- Llamar al 911 (emergencias nacionales)\n"
-            "- Acudir a la Presidencia Municipal y pedir la Contraloría o Juzgado Municipal\n"
-            "- Buscar el sitio web oficial del municipio\n"
-            "- Llamar al 089 (denuncia anónima)\n"
-        )
+        return _generic_municipal_block(municipality, state)
     lines = [
         f"\nCONTACTOS MUNICIPALES — {municipality.upper()} ({data['estado'].upper()}):",
         f"• Urgencias: {data['urgencias']} | 911 (nacional)",
