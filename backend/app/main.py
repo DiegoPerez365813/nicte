@@ -91,7 +91,7 @@ def chat_message(request: ChatRequest) -> ChatResponse:
             start_clarification(session_id, request.message)
             return ChatResponse(
                 session_id=session_id,
-                answer=build_clarification_message(area),
+                answer=build_clarification_message(area, request.message),
                 citations=[],
                 legal_area=area,
                 safety_flag=None,
@@ -122,15 +122,10 @@ def chat_message(request: ChatRequest) -> ChatResponse:
     history = get_history(session_id)
     raw_answer = generate_answer(effective_message, retrieved, defense_chunks, state=user_state, history=history)
 
-    safety_flag = None
-    if not validate_citations(raw_answer, retrieved + defense_chunks):
-        # Citation hallucination guard — strip unverified claims, fall back
-        # to a conservative grounded summary instead of trusting the model.
-        raw_answer = (
-            "Encontré información relacionada, pero no puedo confirmar con "
-            "certeza el artículo exacto aplicable a tu caso."
-        )
-        safety_flag = "low_confidence"
+    # Citation guard: flag unverified citations but keep the full answer —
+    # replacing it with a generic "can't confirm" message is worse UX than
+    # showing real guidance with a low-confidence banner.
+    safety_flag = None if validate_citations(raw_answer, retrieved + defense_chunks) else "low_confidence"
 
     final_answer = append_disclaimer(raw_answer)
 

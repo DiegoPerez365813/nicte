@@ -8,6 +8,34 @@ what's already been done) so the eventual retrieval query is specific
 enough to find the right article instead of guessing from a one-line
 question."""
 
+import re
+
+# Keywords that signal a police-related question. When present we ask the
+# user to specify which type of police was involved, because each corps has
+# different jurisdiction and legal powers.
+_POLICE_PATTERNS = [
+    r"\bpolic[ií]a\b",
+    r"\bguardia\s+nacional\b",
+    r"\bministerial\b",
+    r"\btr[áa]nsito\b",
+    r"\bagente[s]?\b",
+    r"\boficial\s+de\s+polic",
+    r"\bdetenido\b",
+    r"\bme\s+detuvieron\b",
+    r"\bme\s+arrestaron\b",
+    r"\bcateo\b",
+    r"\barresto\b",
+    r"\bdetencion\b",
+    r"\bdetencion\b",
+]
+
+_POLICE_RE = re.compile("|".join(_POLICE_PATTERNS), re.IGNORECASE)
+
+
+def _involves_police(message: str) -> bool:
+    return bool(_POLICE_RE.search(message))
+
+
 CLARIFYING_QUESTIONS: dict[str, list[str]] = {
     "laboral": [
         "¿Cuánto tiempo llevabas trabajando ahí y tenías contrato por escrito?",
@@ -22,6 +50,14 @@ CLARIFYING_QUESTIONS: dict[str, list[str]] = {
         "¿En qué estado de la República ocurrió esto?",
         "¿Ya levantaste una denuncia ante el Ministerio Público, o aún no?",
         "¿Hay algún riesgo inmediato para tu seguridad en este momento?",
+    ],
+    "penal_policia": [
+        "¿En qué estado de la República ocurrió esto?",
+        "¿Qué tipo de policía estuvo involucrado? (por ejemplo: Guardia Nacional, "
+        "Policía Municipal, Policía Estatal, Policía Ministerial / Agente del MP, "
+        "o Policía de Tránsito)",
+        "¿Te detuvieron, te pidieron identificación, realizaron un cateo, "
+        "o fue otro tipo de intervención?",
     ],
     "familiar": [
         "¿En qué estado de la República ocurrió esto?",
@@ -40,11 +76,19 @@ CLARIFYING_QUESTIONS: dict[str, list[str]] = {
 
 
 def needs_clarification(area: str) -> bool:
-    return area in CLARIFYING_QUESTIONS
+    return area in CLARIFYING_QUESTIONS or area == "penal"
 
 
-def build_clarification_message(area: str) -> str:
-    questions = CLARIFYING_QUESTIONS[area]
+def get_clarification_key(area: str, message: str) -> str:
+    """Return the question-set key for this area, taking police context into account."""
+    if area == "penal" and _involves_police(message):
+        return "penal_policia"
+    return area
+
+
+def build_clarification_message(area: str, message: str = "") -> str:
+    key = get_clarification_key(area, message)
+    questions = CLARIFYING_QUESTIONS.get(key, CLARIFYING_QUESTIONS.get(area, []))
     lines = [
         "Antes de darte una orientación más precisa, déjame hacerte un par de "
         "preguntas sobre tu situación:",
