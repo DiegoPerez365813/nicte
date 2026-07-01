@@ -230,6 +230,7 @@ def _anthropic_generate(
     context_chunks: list[RetrievedChunk],
     defense_chunks: list[RetrievedChunk] | None = None,
     state: str | None = None,
+    history: list[dict] | None = None,
 ) -> str:
     import anthropic
 
@@ -256,12 +257,14 @@ def _anthropic_generate(
     user_prompt += _state_institutions_block(state)
     user_prompt += f"PREGUNTA DEL USUARIO:\n{message}"
 
+    messages = list(history or []) + [{"role": "user", "content": user_prompt}]
+
     client = anthropic.Anthropic()
     response = client.messages.create(
         model=_ANTHROPIC_MODEL,
         max_tokens=1024,
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_prompt}],
+        messages=messages,
     )
     return "".join(block.text for block in response.content if block.type == "text")
 
@@ -271,7 +274,8 @@ def generate_answer(
     context_chunks: list[RetrievedChunk],
     defense_chunks: list[RetrievedChunk] | None = None,
     state: str | None = None,
+    history: list[dict] | None = None,
 ) -> str:
     if os.getenv("ANTHROPIC_API_KEY"):
-        return _anthropic_generate(message, context_chunks, defense_chunks, state)
+        return _anthropic_generate(message, context_chunks, defense_chunks, state, history)
     return _mock_generate(message, context_chunks, defense_chunks)

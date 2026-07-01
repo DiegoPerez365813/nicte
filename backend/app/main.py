@@ -18,7 +18,14 @@ from app.safety import (
     validate_citations,
 )
 from app.schemas import ChatRequest, ChatResponse, Citation
-from app.session_store import get_state, resolve_clarification, set_state, start_clarification
+from app.session_store import (
+    append_history,
+    get_history,
+    get_state,
+    resolve_clarification,
+    set_state,
+    start_clarification,
+)
 from app.state_detector import detect_state
 
 app = FastAPI(title="Nicté API", version="0.1.0")
@@ -112,7 +119,8 @@ def chat_message(request: ChatRequest) -> ChatResponse:
         else []
     )
 
-    raw_answer = generate_answer(effective_message, retrieved, defense_chunks, state=user_state)
+    history = get_history(session_id)
+    raw_answer = generate_answer(effective_message, retrieved, defense_chunks, state=user_state, history=history)
 
     safety_flag = None
     if not validate_citations(raw_answer, retrieved + defense_chunks):
@@ -125,6 +133,9 @@ def chat_message(request: ChatRequest) -> ChatResponse:
         safety_flag = "low_confidence"
 
     final_answer = append_disclaimer(raw_answer)
+
+    append_history(session_id, "user", effective_message)
+    append_history(session_id, "assistant", final_answer)
 
     citations = [
         Citation(
