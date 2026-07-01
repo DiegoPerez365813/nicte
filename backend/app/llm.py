@@ -281,8 +281,10 @@ def _anthropic_generate(
     defense_chunks: list[RetrievedChunk] | None = None,
     state: str | None = None,
     history: list[dict] | None = None,
+    municipality: str | None = None,
 ) -> str:
     import anthropic
+    from app.municipal_contacts import municipal_contacts_block
 
     if not context_chunks:
         return (
@@ -304,7 +306,12 @@ def _anthropic_generate(
             for c in defense_chunks
         )
         user_prompt += _DEFENSE_INSTRUCTIONS.format(defense_block=defense_block) + "\n\n"
-    user_prompt += _state_institutions_block(state)
+
+    if municipality:
+        user_prompt += municipal_contacts_block(municipality)
+    elif state:
+        user_prompt += _state_institutions_block(state)
+
     user_prompt += f"PREGUNTA DEL USUARIO:\n{message}"
 
     messages = list(history or []) + [{"role": "user", "content": user_prompt}]
@@ -325,7 +332,8 @@ def generate_answer(
     defense_chunks: list[RetrievedChunk] | None = None,
     state: str | None = None,
     history: list[dict] | None = None,
+    municipality: str | None = None,
 ) -> str:
     if os.getenv("ANTHROPIC_API_KEY"):
-        return _anthropic_generate(message, context_chunks, defense_chunks, state, history)
+        return _anthropic_generate(message, context_chunks, defense_chunks, state, history, municipality)
     return _mock_generate(message, context_chunks, defense_chunks)

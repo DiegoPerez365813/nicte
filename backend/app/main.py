@@ -18,6 +18,7 @@ from app.safety import (
     validate_citations,
 )
 from app.schemas import ChatRequest, ChatResponse, Citation
+from app.municipal_contacts import detect_municipality, municipal_contacts_block
 from app.session_store import (
     append_history,
     get_history,
@@ -64,6 +65,11 @@ def chat_message(request: ChatRequest) -> ChatResponse:
             legal_area="emergencia",
             safety_flag="emergency",
         )
+
+    # Detect municipality for hyper-local contact info (contraloría, DIF, etc.)
+    mentioned_municipality = detect_municipality(request.message)
+    if mentioned_municipality:
+        set_state(session_id, mentioned_municipality)  # municipality implies state too via contacts
 
     # Remember the user's state as soon as it's mentioned, on every message
     # regardless of which branch handles it below — most penal/civil/familiar
@@ -120,7 +126,11 @@ def chat_message(request: ChatRequest) -> ChatResponse:
     )
 
     history = get_history(session_id)
-    raw_answer = generate_answer(effective_message, retrieved, defense_chunks, state=user_state, history=history)
+    raw_answer = generate_answer(
+        effective_message, retrieved, defense_chunks,
+        state=user_state, history=history,
+        municipality=mentioned_municipality or None,
+    )
 
     # Citation guard: flag unverified citations but keep the full answer —
     # replacing it with a generic "can't confirm" message is worse UX than
