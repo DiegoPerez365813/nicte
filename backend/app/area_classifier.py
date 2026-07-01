@@ -33,6 +33,12 @@ AREA_KEYWORDS: dict[str, list[str]] = {
         "lesion", "secuestr", "ministerio publico", "ministerio público",
         "detenci", "arrest", "carcel", "cárcel", "prision", "prisión",
         "menor de edad", "embaraz", "niñ", "niño", "delincuent",
+        # policía y abuso de autoridad
+        "polici", "guardia nacional", "ministerial", "transito", "tránsito",
+        "agente", "confisca", "decomis", "quitaron", "quitó", "me quito",
+        "abuso de autoridad", "cateo", "allanamiento", "requisar",
+        "extorsion", "extorsión", "mordida", "corrupcion", "corrupción",
+        "incomunica", "golpe", "maltra", "tortura",
     ],
     "familiar": [
         "divorci", "pension aliment", "pensión aliment", "aliment",
@@ -52,6 +58,8 @@ AREA_KEYWORDS: dict[str, list[str]] = {
     "constitucional": [
         "constituci", "amparo", "garantias", "garantías",
         "detencion arbitraria", "detención arbitraria", "orden judicial",
+        "derechos", "mis derechos", "me pueden", "pueden obligarme",
+        "tengo derecho", "es legal que", "es ilegal que",
     ],
     "derechos_humanos": [
         "datos personales", "privacidad", "discriminaci", "proteccion de datos",
