@@ -1,15 +1,48 @@
 @import "tailwindcss";
 
-:root {
-  --background: #0a1420;
-  --foreground: #e8edf2;
+/* Enable class-based dark mode: `.dark` on <html> toggles the theme. */
+@custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  /* ── Light theme (default) ── */
+  --background: #eef2f7;
+  --foreground: #0d1b2a;
+
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-deep: #ffffff;
+  --surface-muted: rgba(13, 27, 42, 0.04);
+  --border-soft: rgba(13, 27, 42, 0.10);
+  --border-hard: rgba(13, 27, 42, 0.16);
+  --text-strong: #0d1b2a;
+  --text-muted: rgba(13, 27, 42, 0.62);
+  --text-faint: rgba(13, 27, 42, 0.42);
+  --bot-bubble: #ffffff;
+  --hero-glow: rgba(0, 188, 212, 0.10);
+
+  /* Brand constants (same in both themes) */
   --color-navy: #0d1b2a;
   --color-navy-deep: #060d16;
   --color-indigo: #1a237e;
   --color-turquoise: #00bcd4;
   --color-purple: #5c35a0;
   --color-silver: #b0bec5;
+}
+
+.dark {
+  /* ── Dark theme ── */
+  --background: #060d16;
+  --foreground: #e8edf2;
+
+  --surface: rgba(13, 27, 42, 0.80);
+  --surface-deep: rgba(6, 13, 22, 0.60);
+  --surface-muted: rgba(255, 255, 255, 0.04);
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --border-hard: rgba(255, 255, 255, 0.12);
+  --text-strong: #ffffff;
+  --text-muted: rgba(176, 190, 197, 0.62);
+  --text-faint: rgba(176, 190, 197, 0.40);
+  --bot-bubble: rgba(26, 35, 126, 0.28);
+  --hero-glow: rgba(0, 188, 212, 0.16);
 }
 
 @theme inline {
@@ -21,6 +54,17 @@
   --color-turquoise: var(--color-turquoise);
   --color-purple: var(--color-purple);
   --color-silver: var(--color-silver);
+
+  --color-surface: var(--surface);
+  --color-surface-deep: var(--surface-deep);
+  --color-surface-muted: var(--surface-muted);
+  --color-border-soft: var(--border-soft);
+  --color-border-hard: var(--border-hard);
+  --color-text-strong: var(--text-strong);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-bot-bubble: var(--bot-bubble);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -28,6 +72,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 ::-webkit-scrollbar {
@@ -37,11 +82,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(176, 190, 197, 0.25);
+  background: rgba(128, 140, 150, 0.30);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(176, 190, 197, 0.4);
+  background: rgba(128, 140, 150, 0.5);
 }
 
 @keyframes glow-pulse {

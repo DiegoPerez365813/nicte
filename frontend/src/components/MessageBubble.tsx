@@ -38,11 +38,11 @@ export default function MessageBubble({ message }: { message: ChatMessage }) {
       transition={{ duration: 0.25, ease: "easeOut" }}
       className={`flex items-end gap-2.5 ${isUser ? "flex-row-reverse" : ""}`}
     >
-      {!isUser && <BotAvatar size={36} status={message.safetyFlag === "emergency" ? "alert" : "idle"} />}
+      {!isUser && <BotAvatar size={44} status={message.safetyFlag === "emergency" ? "alert" : "idle"} />}
 
       <div className={`flex max-w-[78%] flex-col gap-2 ${isUser ? "items-end" : "items-start"}`}>
         {!isUser && message.legalArea && (
-          <span className="rounded-full bg-purple/20 px-2.5 py-0.5 text-[11px] font-medium text-purple-200/90 tracking-wide">
+          <span className="rounded-full bg-purple/20 px-2.5 py-0.5 text-[11px] font-medium text-purple dark:text-purple-200/90 tracking-wide">
             {AREA_LABELS[message.legalArea] ?? message.legalArea}
           </span>
         )}
@@ -52,8 +52,8 @@ export default function MessageBubble({ message }: { message: ChatMessage }) {
             isUser
               ? "rounded-br-sm bg-turquoise text-navy-deep font-medium"
               : message.safetyFlag === "emergency"
-              ? "rounded-bl-sm border border-red-400/40 bg-red-950/40 text-red-100"
-              : "rounded-bl-sm border border-white/5 bg-indigo/40 text-silver"
+              ? "rounded-bl-sm border border-red-400/40 bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-100"
+              : "rounded-bl-sm border border-border-soft bg-bot-bubble text-text-strong"
           }`}
         >
           {message.safetyFlag === "emergency" && (

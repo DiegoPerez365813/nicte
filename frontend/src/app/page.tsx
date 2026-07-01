@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
 import { ShieldCheck, Scale, Sparkles } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
 import ChatHistorySidebar, { type SavedConversation } from "@/components/ChatHistorySidebar";
 import HeroBackground from "@/components/HeroBackground";
+import NicteLogo from "@/components/NicteLogo";
+import ThemeToggle from "@/components/ThemeToggle";
 import { sendMessage } from "@/lib/api";
 import type { ChatMessage } from "@/components/MessageBubble";
 
@@ -158,23 +159,19 @@ export default function Home() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center bg-navy-deep px-4 py-16">
+    <main className="relative flex min-h-screen flex-col items-center bg-background px-4 py-16">
       <HeroBackground />
 
+      <div className="absolute right-4 top-4 z-20">
+        <ThemeToggle />
+      </div>
+
       <div className="relative z-10 flex flex-col items-center text-center">
-        <div className="mb-6 h-20 w-32 animate-float-slow">
-          <Image
-            src="/nicte-logo.png"
-            alt="Nicté"
-            width={128}
-            height={80}
-            className="h-full w-full object-contain"
-            priority
-          />
+        <div className="mb-4 animate-float-slow text-text-strong">
+          <NicteLogo size={150} withWordmark />
         </div>
-        <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">Nicté</h1>
-        <p className="mt-2 text-[15px] font-medium text-turquoise/90">Tu aliado para hacer lo correcto.</p>
-        <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-silver/70">
+        <p className="mt-1 text-[15px] font-medium text-turquoise">Tu aliado para hacer lo correcto.</p>
+        <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-text-muted">
           Orientación legal impulsada por inteligencia artificial, diseñada para México. Habla con Nicté Bot y
           entiende tus derechos en segundos.
         </p>
@@ -182,11 +179,11 @@ export default function Home() {
           {VALUE_PROPS.map(({ icon: Icon, title, text }) => (
             <div
               key={title}
-              className="flex flex-col items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.02] px-4 py-4 sm:w-40"
+              className="flex flex-col items-center gap-2 rounded-2xl border border-border-soft bg-surface-muted px-4 py-4 sm:w-40"
             >
               <Icon size={18} className="text-turquoise" />
-              <p className="text-[13px] font-medium text-white">{title}</p>
-              <p className="text-[12px] leading-snug text-silver/60">{text}</p>
+              <p className="text-[13px] font-medium text-text-strong">{title}</p>
+              <p className="text-[12px] leading-snug text-text-muted">{text}</p>
             </div>
           ))}
         </div>
@@ -213,7 +210,7 @@ export default function Home() {
         />
       </div>
 
-      <footer className="relative z-10 mt-10 text-center text-[12px] text-silver/40">
+      <footer className="relative z-10 mt-10 text-center text-[12px] text-text-faint">
         Nicté no es un despacho jurídico. Nicté Bot no es un abogado — la información es orientativa y educativa.
       </footer>
     </main>

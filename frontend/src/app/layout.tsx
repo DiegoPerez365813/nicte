@@ -26,8 +26,18 @@ export default function RootLayout({
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          // Apply the saved theme before first paint to avoid a flash of the
+          // wrong theme. Defaults to dark when nothing is stored.
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('nicte_theme')||'dark';if(t==='dark')document.documentElement.classList.add('dark');}catch(e){document.documentElement.classList.add('dark');}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
