@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Send } from "lucide-react";
 import BotAvatar from "./BotAvatar";
@@ -10,60 +10,33 @@ import DisclaimerBanner from "./DisclaimerBanner";
 import QuickActions from "./QuickActions";
 import { sendMessage } from "@/lib/api";
 
-const WELCOME: ChatMessage = {
-  id: "welcome",
-  role: "bot",
-  text:
-    "Hola, soy Nicté Bot 🌸 Puedo ayudarte a entender tus derechos bajo la ley mexicana, en cualquier área: laboral, civil, penal, familiar, mercantil, fiscal y más. ¿En qué te puedo orientar?",
-};
+interface Props {
+  messages: ChatMessage[];
+  sessionId: string | null;
+  input: string;
+  isLoading: boolean;
+  error: string | null;
+  onInputChange: (v: string) => void;
+  onSend: (text: string) => void;
+}
 
-export default function ChatWindow() {
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default function ChatWindow({
+  messages,
+  sessionId,
+  input,
+  isLoading,
+  error,
+  onInputChange,
+  onSend,
+}: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isLoading]);
 
-  async function handleSend(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed || isLoading) return;
-
-    const userMsg: ChatMessage = { id: crypto.randomUUID(), role: "user", text: trimmed };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const res = await sendMessage(trimmed, sessionId);
-      setSessionId(res.session_id);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "bot",
-          text: res.answer,
-          citations: res.citations,
-          legalArea: res.legal_area,
-          safetyFlag: res.safety_flag,
-        },
-      ]);
-    } catch {
-      setError(
-        "No pude conectar con el backend de Nicté. Verifica que el servidor esté corriendo en http://127.0.0.1:8000."
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   return (
-    <div className="flex h-[680px] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-navy/80 shadow-2xl shadow-black/40 backdrop-blur-xl">
+    <div className="flex h-[680px] w-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-navy/80 shadow-2xl shadow-black/40 backdrop-blur-xl">
       <header className="flex items-center gap-3 border-b border-white/5 bg-navy-deep/60 px-5 py-3.5">
         <BotAvatar size={38} />
         <div>
@@ -94,7 +67,7 @@ export default function ChatWindow() {
 
         {messages.length === 1 && (
           <div className="pt-2">
-            <QuickActions onSelect={handleSend} />
+            <QuickActions onSelect={onSend} />
           </div>
         )}
       </div>
@@ -102,13 +75,13 @@ export default function ChatWindow() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          handleSend(input);
+          onSend(input);
         }}
         className="flex items-center gap-2 border-t border-white/5 bg-navy-deep/60 p-3"
       >
         <input
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => onInputChange(e.target.value)}
           placeholder="Escribe tu duda legal..."
           className="flex-1 rounded-full bg-white/5 px-4 py-2.5 text-[14px] text-white placeholder:text-silver/40 outline-none ring-1 ring-white/10 transition focus:ring-turquoise/50"
         />
