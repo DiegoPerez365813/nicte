@@ -31,14 +31,18 @@ def embed_texts(texts: list[str], show_progress: bool = False) -> np.ndarray:
     total = len(texts)
     for start in range(0, total, _BATCH):
         batch = texts[start : start + _BATCH]
+        retries = 0
         while True:
             try:
                 resp = client.embed(batch, model=_MODEL, input_type="document")
                 results.extend(resp.embeddings)
                 break
             except Exception as exc:
-                if "rate" in str(exc).lower():
-                    time.sleep(5)
+                msg = str(exc).lower()
+                transient = any(k in msg for k in ("rate", "connection", "timeout", "reset", "502", "503", "529"))
+                if transient and retries < 6:
+                    retries += 1
+                    time.sleep(5 * retries)
                 else:
                     raise
         if show_progress:
@@ -54,7 +58,18 @@ def embed_texts(texts: list[str], show_progress: bool = False) -> np.ndarray:
 def embed_query(text: str) -> np.ndarray:
     """Embed a single query string, returning a (1024,) float32 array."""
     client = _get_client()
-    resp = client.embed([text], model=_MODEL, input_type="query")
-    arr = np.array(resp.embeddings[0], dtype=np.float32)
-    norm = np.linalg.norm(arr)
-    return arr / norm if norm > 0 else arr
+    retries = 0
+    while True:
+        try:
+            resp = client.embed([text], model=_MODEL, input_type="query")
+            arr = np.array(resp.embeddings[0], dtype=np.float32)
+            norm = np.linalg.norm(arr)
+            return arr / norm if norm > 0 else arr
+        except Exception as exc:
+            msg = str(exc).lower()
+            transient = any(k in msg for k in ("rate", "connection", "timeout", "reset", "502", "503", "529"))
+            if transient and retries < 6:
+                retries += 1
+                time.sleep(5 * retries)
+            else:
+                raise
