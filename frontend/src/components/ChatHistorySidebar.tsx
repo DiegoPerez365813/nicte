@@ -40,14 +40,14 @@ export default function ChatHistorySidebar({ conversations, activeId, onNewChat,
 
   return (
     <div
-      className={`relative flex flex-col transition-all duration-300 ${
-        collapsed ? "w-10" : "w-72"
-      } shrink-0`}
+      className={`relative flex w-full shrink-0 flex-col transition-all duration-300 ${
+        collapsed ? "lg:w-10" : "lg:w-72"
+      }`}
     >
-      {/* Toggle button */}
+      {/* Toggle button — only useful in the desktop side-by-side layout */}
       <button
         onClick={() => setCollapsed((c) => !c)}
-        className="absolute -left-3 top-4 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-border-soft bg-surface-deep text-text-muted shadow-md hover:text-turquoise transition"
+        className="absolute -left-3 top-4 z-20 hidden h-6 w-6 items-center justify-center rounded-full border border-border-soft bg-surface-deep text-text-muted shadow-md hover:text-turquoise transition lg:flex"
         title={collapsed ? "Expandir historial" : "Colapsar historial"}
       >
         {collapsed ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
@@ -60,7 +60,7 @@ export default function ChatHistorySidebar({ conversations, activeId, onNewChat,
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.2 }}
-            className="flex h-full flex-col rounded-2xl border border-border-soft bg-surface backdrop-blur-xl shadow-xl overflow-hidden"
+            className="flex h-[300px] flex-col rounded-2xl border border-border-soft bg-surface backdrop-blur-xl shadow-xl overflow-hidden lg:h-full"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border-soft bg-surface-deep px-4 py-3">

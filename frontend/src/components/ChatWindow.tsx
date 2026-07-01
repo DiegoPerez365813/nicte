@@ -36,7 +36,7 @@ export default function ChatWindow({
   }, [messages, isLoading]);
 
   return (
-    <div className="flex h-[680px] w-full flex-col overflow-hidden rounded-3xl border border-border-soft bg-surface shadow-2xl shadow-black/20 backdrop-blur-xl">
+    <div className="flex h-[70vh] max-h-[680px] min-h-[460px] w-full flex-col overflow-hidden rounded-3xl border border-border-soft bg-surface shadow-2xl shadow-black/20 backdrop-blur-xl lg:h-[680px] lg:max-h-none">
       <header className="flex items-center gap-3 border-b border-border-soft bg-surface-deep px-5 py-3.5">
         <BotAvatar size={52} />
         <div>

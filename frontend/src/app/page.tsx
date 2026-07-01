@@ -159,23 +159,23 @@ export default function Home() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center bg-background px-4 py-16">
+    <main className="relative flex min-h-screen flex-col items-center bg-background px-3 py-8 sm:px-4 sm:py-12 lg:py-16">
       <HeroBackground />
 
-      <div className="absolute right-4 top-4 z-20">
+      <div className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4">
         <ThemeToggle />
       </div>
 
       <div className="relative z-10 flex flex-col items-center text-center">
-        <div className="mb-4 animate-float-slow text-text-strong">
-          <NicteLogo size={150} withWordmark />
+        <div className="mb-3 animate-float-slow text-text-strong sm:mb-4">
+          <NicteLogo className="w-28 sm:w-36 lg:w-40" withWordmark />
         </div>
-        <p className="mt-1 text-[15px] font-medium text-turquoise">Tu aliado para hacer lo correcto.</p>
-        <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-text-muted">
+        <p className="mt-1 text-[14px] font-medium text-turquoise sm:text-[15px]">Tu aliado para hacer lo correcto.</p>
+        <p className="mx-auto mt-3 max-w-md px-2 text-[14px] leading-relaxed text-text-muted sm:mt-4 sm:text-[15px]">
           Orientación legal impulsada por inteligencia artificial, diseñada para México. Habla con Nicté Bot y
           entiende tus derechos en segundos.
         </p>
-        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid w-full max-w-md grid-cols-1 gap-3 sm:mt-8 sm:max-w-none sm:grid-cols-3">
           {VALUE_PROPS.map(({ icon: Icon, title, text }) => (
             <div
               key={title}
@@ -189,8 +189,8 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="relative z-10 mt-12 w-full max-w-5xl flex gap-4 items-start">
-        <div className="flex-1 min-w-0">
+      <div className="relative z-10 mt-8 flex w-full max-w-5xl flex-col items-stretch gap-4 sm:mt-12 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1">
           <ChatWindow
             messages={messages}
             sessionId={sessionId}
@@ -210,7 +210,7 @@ export default function Home() {
         />
       </div>
 
-      <footer className="relative z-10 mt-10 text-center text-[12px] text-text-faint">
+      <footer className="relative z-10 mt-8 px-4 text-center text-[11px] text-text-faint sm:mt-10 sm:text-[12px]">
         Nicté no es un despacho jurídico. Nicté Bot no es un abogado — la información es orientativa y educativa.
       </footer>
     </main>

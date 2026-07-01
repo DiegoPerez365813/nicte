@@ -25,7 +25,7 @@ export default function NicteLogo({
       strokeWidth="2.2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={className}
+      className={`h-auto ${className}`}
       role="img"
       aria-label="Nicté"
     >
