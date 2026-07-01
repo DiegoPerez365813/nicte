@@ -1,6 +1,6 @@
 "use client";
 
-import { Target, Eye, Heart } from "lucide-react";
+import { Target, Eye, Heart, RotateCcw } from "lucide-react";
 import NicteLogo from "./NicteLogo";
 
 const VALUES = [
@@ -86,6 +86,20 @@ export default function AboutNicte() {
           ))}
         </div>
       </section>
+
+      <div className="mt-8 border-t border-border-soft pt-6 pb-2 text-center">
+        <button
+          onClick={() => {
+            localStorage.removeItem("nicte_onboarding_completed");
+            localStorage.removeItem("nicte_username");
+            window.location.reload();
+          }}
+          className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-2 text-[12px] font-medium text-red-600 transition hover:bg-red-500/10 dark:border-red-400/20 dark:text-red-400"
+        >
+          <RotateCcw size={14} />
+          Reiniciar Onboarding
+        </button>
+      </div>
     </div>
   );
 }

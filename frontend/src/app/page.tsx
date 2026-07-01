@@ -9,14 +9,18 @@ import HeroBackground from "@/components/HeroBackground";
 import ThemeToggle from "@/components/ThemeToggle";
 import { sendMessage } from "@/lib/api";
 import type { ChatMessage } from "@/components/MessageBubble";
+import OnboardingFlow from "@/components/OnboardingFlow";
 
 const STORAGE_KEY = "nicte_conversations";
 
-const WELCOME: ChatMessage = {
-  id: "welcome",
-  role: "bot",
-  text: "Hola, soy Nicté Bot 🌸 Puedo ayudarte a entender tus derechos bajo la ley mexicana, en cualquier área: laboral, civil, penal, familiar, mercantil, fiscal y más. ¿En qué te puedo orientar?",
-};
+function getWelcomeMessage(name?: string): ChatMessage {
+  const greeting = name ? `Hola ${name}, soy Nicté Bot 🌸` : "Hola, soy Nicté Bot 🌸";
+  return {
+    id: "welcome",
+    role: "bot",
+    text: `${greeting} Puedo ayudarte a entender tus derechos bajo la ley mexicana, en cualquier área: laboral, civil, penal, familiar, mercantil, fiscal y más. ¿En qué te puedo orientar?`,
+  };
+}
 
 function titleFromMessages(messages: ChatMessage[]): string {
   const first = messages.find((m) => m.role === "user");
@@ -42,7 +46,10 @@ export default function Home() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [panel, setPanel] = useState<PanelKey | null>(null);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
+  const [username, setUsername] = useState<string>("");
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -50,6 +57,14 @@ export default function Home() {
 
   useEffect(() => {
     setConversations(loadConversations());
+
+    const completed = localStorage.getItem("nicte_onboarding_completed") === "true";
+    setOnboardingCompleted(completed);
+
+    const storedUsername = localStorage.getItem("nicte_username") ?? "";
+    setUsername(storedUsername);
+
+    setMessages([getWelcomeMessage(storedUsername)]);
   }, []);
 
   const persistCurrent = useCallback(
@@ -129,7 +144,7 @@ export default function Home() {
   }
 
   function handleNewChat() {
-    setMessages([WELCOME]);
+    setMessages([getWelcomeMessage(username)]);
     setSessionId(null);
     setActiveId(null);
     setInput("");
@@ -153,6 +168,70 @@ export default function Home() {
       return next;
     });
     if (activeId === id) handleNewChat();
+  }
+
+  async function handleOnboardingComplete(regName?: string, initialQuery?: string) {
+    if (regName) {
+      localStorage.setItem("nicte_username", regName);
+      setUsername(regName);
+    }
+    localStorage.setItem("nicte_onboarding_completed", "true");
+    setOnboardingCompleted(true);
+
+    const initialWelcome = getWelcomeMessage(regName);
+
+    if (initialQuery && initialQuery.trim()) {
+      const userMsg: ChatMessage = { id: crypto.randomUUID(), role: "user", text: initialQuery };
+      setMessages([initialWelcome, userMsg]);
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const res = await sendMessage(initialQuery, null);
+        const newSessionId = res.session_id;
+        setSessionId(newSessionId);
+
+        const botMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "bot",
+          text: res.answer,
+          citations: res.citations,
+          legalArea: res.legal_area,
+          safetyFlag: res.safety_flag,
+        };
+        const finalMessages = [initialWelcome, userMsg, botMsg];
+        setMessages(finalMessages);
+
+        const id = crypto.randomUUID();
+        setActiveId(id);
+        setConversations((convs) => {
+          const updated: SavedConversation = {
+            id,
+            title: titleFromMessages(finalMessages),
+            messages: finalMessages,
+            sessionId: newSessionId,
+            savedAt: new Date().toISOString(),
+          };
+          const next = [updated, ...convs];
+          saveConversations(next);
+          return next;
+        });
+      } catch {
+        setError("No pude conectar con el servidor de Nicté. Intenta de nuevo.");
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setMessages([initialWelcome]);
+    }
+  }
+
+  if (onboardingCompleted === null) {
+    return null; // Evitar parpadeos de carga de localStorage
+  }
+
+  if (!onboardingCompleted) {
+    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
   }
 
   return (
