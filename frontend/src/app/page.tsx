@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { ShieldCheck, Scale, Sparkles } from "lucide-react";
 import ChatWindow from "@/components/ChatWindow";
-import ChatHistorySidebar, { type SavedConversation } from "@/components/ChatHistorySidebar";
+import ChatHistoryList, { type SavedConversation } from "@/components/ChatHistoryList";
+import LeftNav, { type PanelKey } from "@/components/LeftNav";
+import SidePanel from "@/components/SidePanel";
+import AboutNicte from "@/components/AboutNicte";
+import TermsConditions from "@/components/TermsConditions";
 import HeroBackground from "@/components/HeroBackground";
 import NicteLogo from "@/components/NicteLogo";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -46,6 +50,7 @@ function saveConversations(convs: SavedConversation[]) {
 export default function Home() {
   const [conversations, setConversations] = useState<SavedConversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [panel, setPanel] = useState<PanelKey | null>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -139,6 +144,7 @@ export default function Home() {
     setActiveId(null);
     setInput("");
     setError(null);
+    setPanel(null);
   }
 
   function handleLoad(conv: SavedConversation) {
@@ -147,6 +153,7 @@ export default function Home() {
     setActiveId(conv.id);
     setInput("");
     setError(null);
+    setPanel(null);
   }
 
   function handleDelete(id: string) {
@@ -159,8 +166,36 @@ export default function Home() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center bg-background px-3 py-8 sm:px-4 sm:py-12 lg:py-16">
+    <main className="relative flex min-h-screen flex-col items-center bg-background pl-16 pr-3 py-8 sm:pr-4 sm:py-12 lg:py-16">
       <HeroBackground />
+
+      <LeftNav activePanel={panel} onNewChat={handleNewChat} onOpenPanel={setPanel} />
+
+      <SidePanel
+        open={panel === "history"}
+        title="Historial de conversaciones"
+        onClose={() => setPanel(null)}
+      >
+        <ChatHistoryList
+          conversations={conversations}
+          activeId={activeId}
+          onNewChat={handleNewChat}
+          onLoad={handleLoad}
+          onDelete={handleDelete}
+        />
+      </SidePanel>
+
+      <SidePanel open={panel === "about"} title="Acerca de Nicté" onClose={() => setPanel(null)}>
+        <AboutNicte />
+      </SidePanel>
+
+      <SidePanel
+        open={panel === "terms"}
+        title="Términos y condiciones"
+        onClose={() => setPanel(null)}
+      >
+        <TermsConditions />
+      </SidePanel>
 
       <div className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4">
         <ThemeToggle />
@@ -189,24 +224,15 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="relative z-10 mt-8 flex w-full max-w-5xl flex-col items-stretch gap-4 sm:mt-12 lg:flex-row lg:items-start">
-        <div className="min-w-0 flex-1">
-          <ChatWindow
-            messages={messages}
-            sessionId={sessionId}
-            input={input}
-            isLoading={isLoading}
-            error={error}
-            onInputChange={setInput}
-            onSend={handleSend}
-          />
-        </div>
-        <ChatHistorySidebar
-          conversations={conversations}
-          activeId={activeId}
-          onNewChat={handleNewChat}
-          onLoad={handleLoad}
-          onDelete={handleDelete}
+      <div className="relative z-10 mt-8 w-full max-w-2xl sm:mt-12">
+        <ChatWindow
+          messages={messages}
+          sessionId={sessionId}
+          input={input}
+          isLoading={isLoading}
+          error={error}
+          onInputChange={setInput}
+          onSend={handleSend}
         />
       </div>
 
