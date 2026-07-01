@@ -235,7 +235,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center bg-background pl-16 pr-3 py-6 sm:pr-4 sm:py-10">
+    <main className="relative flex h-screen w-full flex-col bg-background pl-16 overflow-hidden">
       <HeroBackground />
 
       <LeftNav activePanel={panel} onNewChat={handleNewChat} onOpenPanel={setPanel} />
@@ -252,11 +252,7 @@ export default function Home() {
         }}
       />
 
-      <div className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4">
-        <ThemeToggle />
-      </div>
-
-      <div className="relative z-10 w-full max-w-2xl">
+      <div className="relative z-10 flex flex-1 flex-col w-full h-full overflow-hidden">
         <ChatWindow
           messages={messages}
           sessionId={sessionId}
@@ -266,9 +262,6 @@ export default function Home() {
           onInputChange={setInput}
           onSend={handleSend}
         />
-        <p className="mt-3 px-4 text-center text-[11px] text-text-faint sm:text-[12px]">
-          Nicté no es un despacho jurídico. Nicté Bot no es un abogado — la información es orientativa y educativa.
-        </p>
       </div>
     </main>
   );
