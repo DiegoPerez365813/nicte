@@ -19,12 +19,10 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from app.area_classifier import classify_areas
 from app.db import get_cursor
-
-_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
+from app.embeddings import embed_query
 
 # Constitutional defense articles shown verbatim (looked up by law+article).
 DEFENSE_ARTICLES: list[dict] = [
@@ -194,7 +192,7 @@ def _fetch_candidates(
 
 class LegalRetriever:
     def __init__(self) -> None:
-        self._model = SentenceTransformer(_MODEL_NAME)
+        pass  # no local model — embeddings via OpenAI API
 
     def get_defense_articles(self) -> list[RetrievedChunk]:
         results = []
@@ -232,7 +230,7 @@ class LegalRetriever:
         semantic_weight: float = 0.7,
         state: str | None = None,
     ) -> list[RetrievedChunk]:
-        query_vec = self._model.encode([query], normalize_embeddings=True)[0]
+        query_vec = embed_query(query)
 
         areas = classify_areas(query)
         candidates = _fetch_candidates(query_vec, state, areas)
