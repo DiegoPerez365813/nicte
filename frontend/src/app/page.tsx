@@ -48,6 +48,7 @@ export default function Home() {
 
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const [username, setUsername] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -58,11 +59,17 @@ export default function Home() {
   useEffect(() => {
     setConversations(loadConversations());
 
-    const completed = localStorage.getItem("nicte_onboarding_completed") === "true";
+    // El flag vive en sessionStorage: persiste durante la sesión (recargas,
+    // navegación) pero se borra al cerrar la pestaña/app, así el onboarding
+    // vuelve a mostrarse en cada nueva apertura.
+    const completed = sessionStorage.getItem("nicte_onboarding_completed") === "true";
     setOnboardingCompleted(completed);
 
     const storedUsername = localStorage.getItem("nicte_username") ?? "";
     setUsername(storedUsername);
+
+    const storedEmail = localStorage.getItem("nicte_email") ?? "";
+    setEmail(storedEmail);
 
     setMessages([getWelcomeMessage(storedUsername)]);
   }, []);
@@ -161,6 +168,13 @@ export default function Home() {
     setPanel(null);
   }
 
+  function handleGoToOnboarding() {
+    // Regresa al onboarding: limpia el flag de sesión y remonta el flujo.
+    sessionStorage.removeItem("nicte_onboarding_completed");
+    setPanel(null);
+    setOnboardingCompleted(false);
+  }
+
   function handleDelete(id: string) {
     setConversations((prev) => {
       const next = prev.filter((c) => c.id !== id);
@@ -170,12 +184,16 @@ export default function Home() {
     if (activeId === id) handleNewChat();
   }
 
-  async function handleOnboardingComplete(regName?: string, initialQuery?: string) {
+  async function handleOnboardingComplete(regName?: string, initialQuery?: string, regEmail?: string) {
     if (regName) {
       localStorage.setItem("nicte_username", regName);
       setUsername(regName);
     }
-    localStorage.setItem("nicte_onboarding_completed", "true");
+    if (regEmail) {
+      localStorage.setItem("nicte_email", regEmail);
+      setEmail(regEmail);
+    }
+    sessionStorage.setItem("nicte_onboarding_completed", "true");
     setOnboardingCompleted(true);
 
     const initialWelcome = getWelcomeMessage(regName);
@@ -238,7 +256,12 @@ export default function Home() {
     <main className="relative flex h-screen w-full flex-col bg-background pl-16 overflow-hidden">
       <HeroBackground />
 
-      <LeftNav activePanel={panel} onNewChat={handleNewChat} onOpenPanel={setPanel} />
+      <LeftNav
+        activePanel={panel}
+        onNewChat={handleNewChat}
+        onOpenPanel={setPanel}
+        onLogoClick={handleGoToOnboarding}
+      />
 
       <SidePanel
         panel={panel}

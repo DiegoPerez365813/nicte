@@ -7,7 +7,7 @@ import NicteLogo from "./NicteLogo";
 import TermsConditions from "./TermsConditions";
 
 interface Props {
-  onComplete: (username?: string, initialQuery?: string) => void;
+  onComplete: (username?: string, initialQuery?: string, email?: string) => void;
 }
 
 type OnboardingStep = "splash" | "welcome" | "terms" | "register" | "guided";
@@ -88,7 +88,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
     e.preventDefault();
     const cleanName = name.trim();
     if (cleanName) {
-      onComplete(cleanName);
+      onComplete(cleanName, undefined, email.trim() || undefined);
     } else {
       setStep("guided");
     }
@@ -312,7 +312,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
                 {SUGGESTED_QUERIES.map((q) => (
                   <button
                     key={q.title}
-                    onClick={() => onComplete(name.trim() || undefined, q.query)}
+                    onClick={() => onComplete(name.trim() || undefined, q.query, email.trim() || undefined)}
                     className="group flex flex-col items-left text-left p-3.5 rounded-2xl border border-border-soft bg-surface-deep/50 hover:bg-turquoise/10 hover:border-turquoise/30 transition duration-200"
                   >
                     <div className="flex items-center justify-between w-full">
@@ -333,7 +333,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
 
               <div className="mt-4 flex justify-center border-t border-border-soft pt-4">
                 <button
-                  onClick={() => onComplete(name.trim() || undefined)}
+                  onClick={() => onComplete(name.trim() || undefined, undefined, email.trim() || undefined)}
                   className="flex items-center gap-2 rounded-full border border-border-hard px-6 py-2 text-[13.5px] font-medium text-text-strong hover:bg-surface-muted transition"
                 >
                   <MessageSquare size={15} />

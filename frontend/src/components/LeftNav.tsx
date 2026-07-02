@@ -9,9 +9,10 @@ interface Props {
   activePanel: PanelKey | null;
   onNewChat: () => void;
   onOpenPanel: (key: PanelKey) => void;
+  onLogoClick: () => void;
 }
 
-export default function LeftNav({ activePanel, onNewChat, onOpenPanel }: Props) {
+export default function LeftNav({ activePanel, onNewChat, onOpenPanel, onLogoClick }: Props) {
   const items: {
     key: string;
     icon: LucideIcon;
@@ -28,9 +29,9 @@ export default function LeftNav({ activePanel, onNewChat, onOpenPanel }: Props) 
   return (
     <nav className="fixed left-0 top-0 z-50 flex h-full w-16 flex-col items-center gap-1 border-r border-border-soft bg-surface-deep py-4">
       <button
-        onClick={onNewChat}
-        title="Ir al chat de Nicté"
-        aria-label="Ir al chat"
+        onClick={onLogoClick}
+        title="Volver al inicio (onboarding)"
+        aria-label="Volver al onboarding"
         className="mb-4 rounded-xl p-1 text-text-strong transition hover:bg-surface-muted hover:text-turquoise"
       >
         <NicteLogo withWordmark={false} className="w-9" />
