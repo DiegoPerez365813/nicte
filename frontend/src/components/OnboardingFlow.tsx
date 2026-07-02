@@ -1,13 +1,19 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Scale, Sparkles, ArrowRight, User, Mail, ChevronRight, MessageSquare } from "lucide-react";
 import NicteLogo from "./NicteLogo";
 import TermsConditions from "./TermsConditions";
+import GoogleSignInButton from "./GoogleSignInButton";
+import type { NicteUser } from "@/lib/api";
 
 interface Props {
   onComplete: (username?: string, initialQuery?: string, email?: string) => void;
+  /** Ya hay un registro guardado (manual o con Google): al aceptar los
+   * términos se salta el paso de registro y se va directo a la consulta
+   * guiada, en vez de volver a pedir nombre/correo. */
+  alreadyRegistered?: boolean;
 }
 
 type OnboardingStep = "splash" | "welcome" | "terms" | "register" | "guided";
@@ -41,12 +47,20 @@ const SUGGESTED_QUERIES = [
   },
 ];
 
-export default function OnboardingFlow({ onComplete }: Props) {
+export default function OnboardingFlow({ onComplete, alreadyRegistered }: Props) {
   const [step, setStep] = useState<OnboardingStep>("splash");
   const [progress, setProgress] = useState(0);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
+  const handleGoogleSuccess = useCallback(
+    (user: NicteUser) => {
+      onComplete(user.name ?? undefined, undefined, user.email ?? undefined);
+    },
+    [onComplete]
+  );
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -216,7 +230,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
 
                 <button
                   disabled={!hasScrolledToBottom}
-                  onClick={() => setStep("register")}
+                  onClick={() => setStep(alreadyRegistered ? "guided" : "register")}
                   className="flex items-center gap-2 rounded-full bg-turquoise px-6 py-2.5 text-[14px] font-semibold text-navy-deep shadow-lg shadow-turquoise/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-text-faint disabled:shadow-none"
                 >
                   Aceptar y continuar
@@ -243,7 +257,22 @@ export default function OnboardingFlow({ onComplete }: Props) {
                 </p>
               </div>
 
-              <form onSubmit={handleRegisterSubmit} className="my-6 space-y-4">
+              <div className="mt-6 flex flex-col items-center gap-3">
+                <GoogleSignInButton onSuccess={handleGoogleSuccess} onError={setGoogleError} />
+                {googleError && (
+                  <p className="text-[12px] text-red-500 dark:text-red-400">{googleError}</p>
+                )}
+              </div>
+
+              <div className="my-5 flex items-center gap-3">
+                <div className="h-px flex-1 bg-border-soft" />
+                <span className="text-[11px] font-medium uppercase tracking-wide text-text-faint">
+                  o con tu correo
+                </span>
+                <div className="h-px flex-1 bg-border-soft" />
+              </div>
+
+              <form onSubmit={handleRegisterSubmit} className="space-y-4">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-text-faint">
                     <User size={16} />

@@ -36,3 +36,43 @@ export async function sendMessage(
 
   return res.json();
 }
+
+export type NicteUser = {
+  name: string | null;
+  email: string | null;
+  picture: string | null;
+};
+
+// Auth calls always use credentials:"include" so the browser sends/receives
+// the HttpOnly session cookie set by the backend (cross-site: Vercel <-> Render).
+
+export async function signInWithGoogle(credential: string): Promise<NicteUser> {
+  const res = await fetch(`${API_URL}/v1/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ credential }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`No se pudo iniciar sesión con Google (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export async function getCurrentUser(): Promise<NicteUser | null> {
+  const res = await fetch(`${API_URL}/v1/auth/me`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function logout(): Promise<void> {
+  await fetch(`${API_URL}/v1/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  }).catch(() => {});
+}

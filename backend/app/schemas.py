@@ -24,3 +24,13 @@ class ChatResponse(BaseModel):
     citations: list[Citation]
     legal_area: str
     safety_flag: Optional[Literal["emergency", "out_of_scope", "low_confidence"]] = None
+
+
+class GoogleSignInRequest(BaseModel):
+    credential: str = Field(..., min_length=1)
+
+
+class UserResponse(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    picture: Optional[str] = None

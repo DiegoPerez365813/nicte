@@ -1,12 +1,21 @@
+import os
 import uuid
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
 from app.area_classifier import classify_areas
+from app.auth import (
+    SESSION_COOKIE_NAME,
+    create_session_token,
+    get_user_by_id,
+    read_session_token,
+    upsert_user,
+    verify_google_credential,
+)
 from app.clarification import build_clarification_message, needs_clarification
 from app.llm import generate_answer
 from app.rag import get_retriever
@@ -17,7 +26,7 @@ from app.safety import (
     detect_emergency,
     validate_citations,
 )
-from app.schemas import ChatRequest, ChatResponse, Citation
+from app.schemas import ChatRequest, ChatResponse, Citation, GoogleSignInRequest, UserResponse
 from app.municipal_contacts import (
     detect_municipality,
     extract_municipality_name,
@@ -35,9 +44,13 @@ from app.state_detector import detect_state
 
 app = FastAPI(title="Nicté API", version="0.1.0")
 
+# Wildcard origins can't be combined with credentialed requests (cookies) —
+# the Google session cookie requires an explicit origin allowlist.
+_FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "https://nicte.vercel.app")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten before production
+    allow_origins=[_FRONTEND_ORIGIN, "http://localhost:3000"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -54,6 +67,53 @@ def warm_up_retriever() -> None:
 
 @app.get("/health")
 def health() -> dict:
+    return {"status": "ok"}
+
+
+def _set_session_cookie(response: Response, user_id: str) -> None:
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=create_session_token(user_id),
+        max_age=60 * 60 * 24 * 30,
+        httponly=True,
+        secure=True,
+        samesite="none",  # frontend (Vercel) and backend (Render) are different origins
+        path="/",
+    )
+
+
+@app.post("/v1/auth/google", response_model=UserResponse)
+def auth_google(request: GoogleSignInRequest, response: Response) -> UserResponse:
+    try:
+        claims = verify_google_credential(request.credential)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    user = upsert_user(
+        google_sub=claims["sub"],
+        email=claims.get("email"),
+        name=claims.get("name"),
+        picture=claims.get("picture"),
+    )
+    _set_session_cookie(response, user["id"])
+    return UserResponse(name=user["name"], email=user["email"], picture=user["picture"])
+
+
+@app.get("/v1/auth/me", response_model=UserResponse)
+def auth_me(request: Request) -> UserResponse:
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    user_id = read_session_token(token) if token else None
+    if not user_id:
+        raise HTTPException(status_code=401, detail="No active session")
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="No active session")
+    return UserResponse(name=user["name"], email=user["email"], picture=user["picture"])
+
+
+@app.post("/v1/auth/logout")
+def auth_logout(response: Response) -> dict:
+    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
     return {"status": "ok"}
 
 

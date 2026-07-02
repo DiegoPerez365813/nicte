@@ -7,7 +7,7 @@ import LeftNav, { type PanelKey } from "@/components/LeftNav";
 import SidePanel from "@/components/SidePanel";
 import HeroBackground from "@/components/HeroBackground";
 import ThemeToggle from "@/components/ThemeToggle";
-import { sendMessage } from "@/lib/api";
+import { getCurrentUser, sendMessage } from "@/lib/api";
 import type { ChatMessage } from "@/components/MessageBubble";
 import OnboardingFlow from "@/components/OnboardingFlow";
 
@@ -49,6 +49,7 @@ export default function Home() {
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const [username, setUsername] = useState<string>("");
   const [email, setEmail] = useState<string>("");
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -71,7 +72,28 @@ export default function Home() {
     const storedEmail = localStorage.getItem("nicte_email") ?? "";
     setEmail(storedEmail);
 
+    setAlreadyRegistered(localStorage.getItem("nicte_registered") === "true");
+
     setMessages([getWelcomeMessage(storedUsername)]);
+
+    // Si hay una sesión de Google viva en el backend, refresca nombre/correo
+    // desde ahí (fuente de verdad del lado servidor). Silencioso si no hay
+    // sesión o el backend no está configurado todavía — no bloquea el render.
+    getCurrentUser()
+      .then((user) => {
+        if (!user) return;
+        if (user.name) {
+          localStorage.setItem("nicte_username", user.name);
+          setUsername(user.name);
+        }
+        if (user.email) {
+          localStorage.setItem("nicte_email", user.email);
+          setEmail(user.email);
+        }
+        localStorage.setItem("nicte_registered", "true");
+        setAlreadyRegistered(true);
+      })
+      .catch(() => {});
   }, []);
 
   const persistCurrent = useCallback(
@@ -193,6 +215,10 @@ export default function Home() {
       localStorage.setItem("nicte_email", regEmail);
       setEmail(regEmail);
     }
+    if (regName || regEmail) {
+      localStorage.setItem("nicte_registered", "true");
+      setAlreadyRegistered(true);
+    }
     sessionStorage.setItem("nicte_onboarding_completed", "true");
     setOnboardingCompleted(true);
 
@@ -249,7 +275,7 @@ export default function Home() {
   }
 
   if (!onboardingCompleted) {
-    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+    return <OnboardingFlow onComplete={handleOnboardingComplete} alreadyRegistered={alreadyRegistered} />;
   }
 
   return (
